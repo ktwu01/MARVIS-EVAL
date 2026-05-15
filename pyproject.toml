@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mavis-eval"
+version = "0.1.0"
+description = "MVP harness for the Mavis multimodal I/O benchmark"
+readme = "README.MD"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "Mavis Eval Team" }]
+dependencies = []
+
+[project.scripts]
+mavis-eval = "mavis_eval.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["mavis_eval*"]

@@ -200,18 +200,23 @@ def _csv_row_count_min(assertion: dict[str, Any], _case: dict[str, Any], run_dir
 def _contains_text(assertion: dict[str, Any], _case: dict[str, Any], run_dir: Path, _trajectory: list[dict[str, Any]]) -> AssertionResult:
     path = _safe_path(run_dir, assertion["path"])
     text = path.read_text(encoding="utf-8")
-    required = assertion.get("all_of") or [assertion["text"]]
+    required = assertion.get("all_of") or ([assertion["text"]] if "text" in assertion else [])
+    alternatives = assertion.get("any_of") or []
     if assertion.get("ignore_case"):
         haystack = text.casefold()
         missing = [item for item in required if item.casefold() not in haystack]
+        matched_alternatives = [item for item in alternatives if item.casefold() in haystack]
     else:
         missing = [item for item in required if item not in text]
+        matched_alternatives = [item for item in alternatives if item in text]
+    if alternatives and not matched_alternatives:
+        missing.append(f"one of {alternatives}")
     return AssertionResult(
         assertion["id"],
         assertion["type"],
         not missing,
         "all required text found" if not missing else f"missing text: {missing}",
-        expected=required,
+        expected={"all_of": required, "any_of": alternatives},
         observed={"chars": len(text)},
     )
 

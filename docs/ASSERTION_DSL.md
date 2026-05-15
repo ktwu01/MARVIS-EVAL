@@ -22,7 +22,7 @@ Every assertion has:
 | `mock_state_equals` | Alias for `state_json_equals` | `path`, `json_path`, `equals` |
 | `csv_columns_present` | CSV has required headers | `path`, `columns` |
 | `csv_row_count_min` | CSV has at least N data rows | `path`, `min` |
-| `contains_text` | Text artifact contains all required strings | `path`, `text` or `all_of`, optional `ignore_case` |
+| `contains_text` | Text artifact contains required strings. Use `all_of` for required terms and `any_of` for accepted alternatives. | `path`, `text` or `all_of`, optional `any_of`, optional `ignore_case` |
 | `regex_file` | Text artifact has at least N regex matches | `path`, `pattern`, optional `min_count` |
 | `word_count_max` | Text artifact stays under a word cap | `path`, `max` |
 | `tool_called` | Trajectory contains a tool call | `tool`, optional `min_count` |

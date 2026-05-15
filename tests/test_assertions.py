@@ -96,6 +96,27 @@ class AssertionTests(TestCase):
 
         self.assertTrue(report["gating_pass"])
 
+    def test_contains_text_supports_alternatives(self) -> None:
+        with TemporaryDirectory() as tmp:
+            run_dir = Path(tmp)
+            (run_dir / "output").mkdir()
+            (run_dir / "output" / "answer.md").write_text("No matching 3pm recording", encoding="utf-8")
+
+            case = _case()
+            case["success_criteria"]["gating_assertions"] = [
+                {
+                    "id": "g1",
+                    "type": "contains_text",
+                    "path": "output/answer.md",
+                    "all_of": ["3pm"],
+                    "any_of": ["missing", "no matching"],
+                    "ignore_case": True,
+                }
+            ]
+            report = run_executable_assertions(case, run_dir)
+
+        self.assertTrue(report["gating_pass"])
+
 
 def _case() -> dict:
     return {

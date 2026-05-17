@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mavis-Eval 复现手册 (RUNBOOK)</title>
+<style>
+  :root {
+    --bg: #0b0d10;
+    --panel: #12161b;
+    --panel-2: #181d23;
+    --ink: #e7ecf2;
+    --ink-dim: #9aa3ad;
+    --rule: #232a32;
+    --accent: #ff6a3d;
+    --accent-2: #6fd0a4;
+    --warn: #f0b248;
+    --bad: #e8617a;
+    --link: #8ab4ff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Helvetica Neue", Arial, "PingFang SC", "Noto Sans CJK SC", sans-serif;
+    line-height: 1.6; font-size: 15px;
+  }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace; font-size: 12.5px; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 40px 28px 80px; }
+  header.hero { padding: 64px 28px 32px; max-width: 1100px; margin: 0 auto; }
+  .eyebrow { color: var(--accent); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; font-size: 12px; }
+  h1 { font-size: 40px; line-height: 1.1; margin: 8px 0 14px; letter-spacing: -0.01em; }
+  h1 .accent { color: var(--accent); }
+  .lede { color: var(--ink-dim); max-width: 820px; font-size: 17px; }
+  .meta { display: flex; gap: 16px; flex-wrap: wrap; color: var(--ink-dim); font-size: 12.5px; margin-top: 18px; }
+  .meta span::before { content: "·"; margin-right: 12px; color: var(--rule); }
+  .meta span:first-child::before { content: ""; margin: 0; }
+  nav.toc { position: sticky; top: 0; background: rgba(11,13,16,0.92); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--rule); z-index: 50; padding: 10px 28px; }
+  nav.toc ul { list-style: none; display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0 auto; padding: 0; max-width: 1100px; font-size: 13px; }
+  nav.toc a { color: var(--ink-dim); padding: 4px 0; }
+  nav.toc a:hover { color: var(--ink); text-decoration: none; }
+  section { margin: 56px 0; }
+  h2 { font-size: 26px; margin: 0 0 10px; letter-spacing: -0.005em; }
+  h2 .num { color: var(--accent); margin-right: 10px; font-variant-numeric: tabular-nums; }
+  h3 { font-size: 17px; margin: 22px 0 8px; color: var(--ink); }
+  h4 { font-size: 14px; margin: 18px 0 6px; color: var(--ink); }
+  p { color: var(--ink); }
+  .sub { color: var(--ink-dim); margin-top: 0; }
+  .grid { display: grid; gap: 16px; }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g3 { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 900px) { .g2, .g3 { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; }
+  .card h4 { margin: 0 0 8px; font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-dim); }
+  .pill { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px;
+    border: 1px solid var(--rule); color: var(--ink-dim); background: var(--panel-2); margin-right: 6px; margin-bottom: 4px; }
+  .pill.accent { color: var(--accent); border-color: rgba(255,106,61,0.4); }
+  .pill.ok { color: var(--accent-2); border-color: rgba(111,208,164,0.3); }
+  .pill.warn { color: var(--warn); border-color: rgba(240,178,72,0.3); }
+  .pill.bad { color: var(--bad); border-color: rgba(232,97,122,0.3); }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { color: var(--ink-dim); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; background: var(--panel-2); }
+  tr:hover td { background: rgba(255,255,255,0.015); }
+  pre.codeblock { background: var(--panel-2); border: 1px solid var(--rule); border-radius: 8px;
+    padding: 14px 16px; overflow-x: auto; color: var(--ink); margin: 12px 0; }
+  pre.codeblock .cmt { color: var(--ink-dim); font-style: italic; }
+  pre.codeblock .var { color: #c8a8ff; }
+  pre.codeblock .str { color: #8fd3a6; }
+  pre.codeblock .ok { color: var(--accent-2); }
+  pre.codeblock .bad { color: var(--bad); }
+  .callout { border-left: 3px solid var(--accent); background: var(--panel-2); padding: 12px 16px; border-radius: 0 8px 8px 0; color: var(--ink); margin: 14px 0; }
+  .callout.note { border-left-color: var(--accent-2); }
+  .callout.warn { border-left-color: var(--warn); }
+  .callout strong { color: var(--ink); }
+  .step { display: flex; gap: 14px; margin: 14px 0; align-items: flex-start; }
+  .step-num { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent); color: #0b0d10; font-weight: 700; font-size: 13px;
+    display: flex; align-items: center; justify-content: center; margin-top: 2px; }
+  .step-body { flex: 1; }
+  .step-body h4 { margin: 2px 0 6px; font-size: 15px; text-transform: none; letter-spacing: 0; color: var(--ink); }
+  .kbd { font-family: ui-monospace, monospace; font-size: 11.5px; padding: 1px 5px; border: 1px solid var(--rule); border-radius: 4px; background: var(--panel-2); color: var(--ink-dim); }
+  ul.checklist { list-style: none; padding: 0; }
+  ul.checklist li { padding: 4px 0 4px 22px; position: relative; }
+  ul.checklist li::before { content: "✓"; position: absolute; left: 0; color: var(--accent-2); font-weight: 700; }
+  ul.checklist li.x::before { content: "✗"; color: var(--bad); }
+  footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--rule); color: var(--ink-dim); font-size: 12.5px; }
+  .path { font-family: ui-monospace, monospace; color: var(--accent); font-size: 12.5px; }
+  .toggle { display: inline-block; padding: 4px 10px; font-size: 12px; border: 1px solid var(--rule); border-radius: 6px; color: var(--ink-dim); margin-right: 6px; cursor: default; }
+  .toggle.active { background: var(--accent); color: #0b0d10; border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<nav class="toc" aria-label="目录">
+  <ul>
+    <li><a href="#why">为什么有这份手册</a></li>
+    <li><a href="#prereq">先决条件</a></li>
+    <li><a href="#path-a">A 路径: 人工手动跑</a></li>
+    <li><a href="#path-b">B 路径: 指挥 agent 跑</a></li>
+    <li><a href="#path-c">C 路径: 完整复现 13 个 task</a></li>
+    <li><a href="#read-report">读懂 report</a></li>
+    <li><a href="#troubleshooting">常见问题</a></li>
+    <li><a href="#one-pager">一页速查</a></li>
+  </ul>
+</nav>
+
+<header class="hero">
+  <div class="eyebrow">RUNBOOK · MARVIS-EVAL</div>
+  <h1>Mavis-Eval <span class="accent">复现手册</span></h1>
+  <p class="lede">三种姿势把 benchmark 跑起来: 人工手动操作、指挥 AI agent 操作、完整复现 13 个 task 的结果。读完这一页, 任何拿到 repo 的人 30 分钟内可以跑出第一个 report。</p>
+  <div class="meta">
+    <span>v0.1</span>
+    <span>面向: 工程师 + 评估者 + 面试官</span>
+    <span>配套: <a href="demo.html">demo.html</a> (设计文档)</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- ==================== 0 为什么有这份手册 ==================== -->
+<section id="why">
+  <h2><span class="num">00</span>为什么有这份手册</h2>
+  <p class="sub">Demo (<a href="demo.html">demo.html</a>) 讲的是 <strong>设计</strong>: 评估维度、schema、关卡 (gate)、判分器 (judge)。这份 RUNBOOK 讲的是 <strong>怎么把它跑起来</strong>。</p>
+
+  <div class="grid g3">
+    <div class="card">
+      <h4>A 路径 · 人工手动</h4>
+      <p>你在终端里, 一条条敲 <span class="kbd">mavis-eval</span> 命令。适合: 第一次用、想搞清楚每一步在做什么、调试某个 case。</p>
+    </div>
+    <div class="card">
+      <h4>B 路径 · 指挥 agent</h4>
+      <p>把这份手册丢给 Claude Code / Codex / Cursor, 让它代你跑。适合: 批量评估、自动化集成、CI 流水线。</p>
+    </div>
+    <div class="card">
+      <h4>C 路径 · 完整复现</h4>
+      <p>从空 repo 到 13 份 report 全跑完。适合: 拿到 repo 想验证 demo 里的数字真不真。</p>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>核心约定。</strong> 一次 evaluate 等于: 一个 <span class="path">case JSON</span> + 一个 <span class="path">run 目录</span> 喂给 <span class="kbd">mavis-eval evaluate</span>, 输出一份 <span class="path">report JSON</span>。case 描述任务、run 是 agent 的实际产出 (trajectory + 文件), report 是评估结论。
+  </div>
+</section>
+
+<!-- ==================== 1 先决条件 ==================== -->
+<section id="prereq">
+  <h2><span class="num">01</span>先决条件 (Prerequisites)</h2>
+
+  <h3>1.1 必装</h3>
+  <ul class="checklist">
+    <li>Python 3.11+ (<span class="kbd">python3 --version</span> 验证)</li>
+    <li>Git, 用于 clone repo</li>
+    <li>一个能写文件的工作目录</li>
+  </ul>
+
+  <h3>1.2 可选 (跑 C 路径或想接真实 Mavis 才需要)</h3>
+  <ul class="checklist">
+    <li>MiniMax Mavis 桌面 app, 并且 <span class="kbd">mavis</span> CLI 能 <span class="kbd">session new</span>。注意: 当前 v3.0.27 有一个 <span class="path">better-sqlite3</span> 打包 bug, 见 <a href="RUNNING_MAVIS.md">RUNNING_MAVIS.md</a></li>
+    <li>能跑 judge 模型的 API key (OpenAI / Anthropic / 等等), 用来跑 L3 LLM judge。<strong>注意</strong>: 当前 13 份 report 是在 judge 不可用的情况下产出的, 仅靠 L1 / L2 deterministic 关卡, 故事依然成立, 见 demo 里 "实测结果"。</li>
+  </ul>
+
+  <h3>1.3 一次性安装</h3>
+<pre class="codeblock"><span class="cmt"># clone repo</span>
+git clone &lt;repo-url&gt; MARVIS-EVAL
+cd MARVIS-EVAL
+
+<span class="cmt"># 没有外部依赖, 纯 Python 标准库就能跑 deterministic 评估</span>
+<span class="cmt"># 想跑 judge 的话另外装一下你选的 LLM SDK, 例如 openai 或 anthropic</span>
+
+<span class="cmt"># 验证安装</span>
+python3 -m mavis_eval --help
+<span class="cmt"># 应该看到 7 个子命令: validate / list-cases / evaluate / judge-payload / report / compare / run-mavis</span></pre>
+
+  <div class="callout note">
+    <strong>为什么没有 pip install。</strong> 这是 MVP, 故意保持零外部依赖, 你 clone 下来就能跑。<span class="kbd">pyproject.toml</span> 里 dependencies 是空的, 不是漏写, 是故意的。
+  </div>
+</section>
+
+<!-- ==================== 2 A 路径: 人工手动 ==================== -->
+<section id="path-a">
+  <h2><span class="num">02</span>A 路径: 人工手动跑 <span class="pill accent">推荐第一次用</span></h2>
+  <p class="sub">目标: 在终端里, 把一个具体 case (例如 <span class="path">travel_plan_001</span>) 评估出一份 report。所有命令都是真实的, 我们的 13 份 report 就是这么跑出来的。</p>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h4>验证 case 文件合法</h4>
+      <p>先确认 case 文件结构 OK, schema 没坏。</p>
+<pre class="codeblock">python3 -m mavis_eval validate cases/examples
+<span class="cmt"># 期望输出: validated N cases from M files</span></pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h4>看一下都有哪些 case</h4>
+<pre class="codeblock">python3 -m mavis_eval list-cases cases/examples
+<span class="cmt"># 输出 13 行, 每行一个 case_id + 标题</span></pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h4>挑一个 case 看它的内容</h4>
+      <p>例如东京家庭游 (L4 高难度):</p>
+<pre class="codeblock">python3 -c "import json; cases = json.load(open('cases/examples/smoke_seed_cases.json')); c = [x for x in cases if x['case_id'] == 'travel_plan_001'][0]; print(json.dumps(c, indent=2, ensure_ascii=False))" | less</pre>
+      <p>看里面的 <span class="kbd">user_instruction</span>, <span class="kbd">input_modalities</span>, <span class="kbd">success_criteria</span>, <span class="kbd">rubric</span>。这就是 agent 要解的题。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <h4>看一下 run 目录里 agent 的产出</h4>
+      <p>每个 case 对应 <span class="path">runs/&lt;case_id&gt;/</span> 一个目录, 里面是 agent 实际跑出来的东西。</p>
+<pre class="codeblock">ls runs/travel_plan_001/
+<span class="cmt"># 输出大致:</span>
+<span class="cmt"># output/        agent 写出的文件 (这里是 itinerary.md)</span>
+<span class="cmt"># trajectory.jsonl  agent 每一步调用了什么工具、看到了什么</span>
+<span class="cmt"># state/         agent 操作前后的环境快照</span>
+
+cat runs/travel_plan_001/output/itinerary.md | head -30</pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <h4>跑 deterministic 评估</h4>
+      <p>这一步把 L1 (gating) + L2 (quality) 的关卡评出来。不需要 LLM, 几十毫秒就好。</p>
+<pre class="codeblock">python3 -m mavis_eval evaluate cases/examples/smoke_seed_cases.json \
+  --case-id travel_plan_001 \
+  --run-dir runs/travel_plan_001 \
+  --deterministic-only \
+  --out reports/travel_plan_001.json</pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">6</div>
+    <div class="step-body">
+      <h4>读 report</h4>
+<pre class="codeblock">python3 -c "import json; r = json.load(open('reports/travel_plan_001.json')); print(f'pass: {r[\"pass\"]}  gating: {r[\"gating_pass\"]}  judge_available: {r[\"judge\"][\"available\"]}')"
+<span class="cmt"># pass: True  gating: True  judge_available: False</span></pre>
+      <p>L1+L2 全过, L3 judge 没接, 当前判为 <span class="pill ok">PASS</span>。详细看下面 <a href="#read-report">读懂 report</a>。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">7</div>
+    <div class="step-body">
+      <h4>看一个失败案例</h4>
+      <p>把命令换成 <span class="path">excel_anomaly_001</span>, 重跑第 5、6 步:</p>
+<pre class="codeblock">python3 -m mavis_eval evaluate cases/examples/smoke_seed_cases.json \
+  --case-id excel_anomaly_001 \
+  --run-dir runs/excel_anomaly_001 \
+  --deterministic-only \
+  --out reports/excel_anomaly_001.json
+
+python3 -c "import json; r = json.load(open('reports/excel_anomaly_001.json')); print(json.dumps(r['assertions']['failed_gates'], indent=2))"</pre>
+      <p>会看到 agent 的 CSV 列名错了 (<span class="path">q1_sales</span> 而不是 <span class="path">previous_quarter_sales</span>), L1 schema 关卡当场抓住, <span class="pill bad">FAIL</span>。这就是 benchmark 的价值: 表面看 agent "完成了任务", 但格式不合规, 下游会炸。</p>
+    </div>
+  </div>
+
+  <div class="callout note">
+    <strong>第一次跑完了。</strong> 你已经从 case 出发, 看到 run 产出, 跑了评估, 看到一个 pass 一个 fail。整个 pipeline 就这 7 步, 后面只是把它批量化。
+  </div>
+</section>
+
+<!-- ==================== 3 B 路径: 指挥 agent 跑 ==================== -->
+<section id="path-b">
+  <h2><span class="num">03</span>B 路径: 指挥 agent 跑 <span class="pill accent">推荐批量评估</span></h2>
+  <p class="sub">目标: 把这份手册丢给一个 AI coding agent (Claude Code / Codex / Cursor / 其他), 它代你跑。用于 CI、定时回归、人不在的时候。</p>
+
+  <h3>3.1 给 agent 的 prompt 模板</h3>
+  <p>下面这一段, 直接复制到 agent 的对话框, 替换 <span class="path">&lt;...&gt;</span> 占位符即可。</p>
+
+<pre class="codeblock">你是一个 evaluation 工程师。在 MARVIS-EVAL 项目根目录下工作。
+
+任务:
+1. 跑 `python3 -m mavis_eval list-cases cases/examples`, 获取所有 case_id。
+2. 对每一个 case_id, 依次跑:
+   python3 -m mavis_eval evaluate cases/examples/smoke_seed_cases.json \
+     --case-id &lt;case_id&gt; \
+     --run-dir runs/&lt;case_id&gt; \
+     --deterministic-only \
+     --out reports/&lt;case_id&gt;.json
+3. 跑完后, 聚合:
+   python3 -m mavis_eval report reports --out reports/summary.json
+4. 读 reports/summary.json, 报告: 总数 / pass 数 / fail 数 / 每个 fail 的根因 (从 assertions.failed_gates 里抽 message 字段)。
+5. 如果有 fail, 不要试图修复 case 或 run, 只汇报。
+
+约束:
+- 不要修改 cases/ 或 runs/ 下任何文件
+- 不要 commit, 不要 push
+- 全部命令在项目根目录跑
+- 200 字以内汇报结果</pre>
+
+  <h3>3.2 给 agent 的"接真实 Mavis"prompt (进阶)</h3>
+  <p>如果你想让 agent 不光评估, 还**自己驱动 Mavis 把 case 跑一遍**, 用 <span class="kbd">run-mavis</span> 子命令:</p>
+
+<pre class="codeblock">前置: 本地 Mavis 桌面 app 已启动, daemon 健康 (mavis status 输出 healthy)。
+
+对每个 case_id, 跑:
+  python3 -m mavis_eval run-mavis cases/examples/smoke_seed_cases.json \
+    --case-id &lt;case_id&gt; \
+    --fixtures-root fixtures \
+    --timeout-s 300
+
+这个命令会:
+  - 把 fixtures/&lt;case_id&gt;/ 下的输入文件拷进 runs/&lt;case_id&gt;/
+  - 调 mavis session new, 启动一次新会话
+  - 把 case 的 user_instruction 投到 mavis
+  - 等 mavis 跑完, 把 trajectory 转成 trajectory.jsonl
+  - 跑 deterministic 评估, 写 reports/&lt;case_id&gt;.json
+
+如果 mavis daemon 报 better-sqlite3 错, 先停下来读 docs/RUNNING_MAVIS.md, 别硬扛。</pre>
+
+  <h3>3.3 给 agent 的"加判分器 (judge)"prompt (进阶)</h3>
+<pre class="codeblock">前置: 已配置 OPENAI_API_KEY (或你选的 LLM provider 的 key)。
+
+对每个 case_id, 两步:
+
+第 1 步: 生成 judge payload (给判分器看的证据包)
+  python3 -m mavis_eval judge-payload cases/examples/smoke_seed_cases.json \
+    --case-id &lt;case_id&gt; \
+    --run-dir runs/&lt;case_id&gt; \
+    --out judge_payloads/&lt;case_id&gt;.json
+
+第 2 步: 把 prompts/deliverable_judge_v1.0.txt 作为 SYSTEM, 把 payload 作为 USER, 调 LLM,
+        把返回的 JSON 存到 judge_results/&lt;case_id&gt;.json
+
+第 3 步: 把 judge result 合到最终 report
+  python3 -m mavis_eval evaluate cases/examples/smoke_seed_cases.json \
+    --case-id &lt;case_id&gt; \
+    --run-dir runs/&lt;case_id&gt; \
+    --judge-result judge_results/&lt;case_id&gt;.json \
+    --out reports/&lt;case_id&gt;.json
+
+注意:
+- judge 模型不要看 trajectory 里的 agent self-reasoning, 只看 tool calls / observations / final artifact
+- judge 输出必须是 strict JSON, 看 prompt 里 line 33 后面的 schema</pre>
+
+  <div class="callout warn">
+    <strong>给 agent 的安全围栏。</strong> 在 agent prompt 里明确写 "不要修改 cases/ 和 runs/"。否则 agent 看到 fail 会"贴心地"去改 case 让它通过, 这是评估反模式 (Goodhart's law), 必须堵住。
+  </div>
+</section>
+
+<!-- ==================== 4 C 路径: 完整复现 ==================== -->
+<section id="path-c">
+  <h2><span class="num">04</span>C 路径: 完整复现 13 个 task 的结果</h2>
+  <p class="sub">目标: 从空 repo 到 demo 里那张 "13 task, 10 pass, 3 fail" 的总表全部复现。</p>
+
+  <h3>4.1 当前 repo 已经包含的产物</h3>
+  <table>
+    <tr><th>目录</th><th>内容</th><th>是否复现需要重跑</th></tr>
+    <tr><td><span class="path">cases/examples/</span></td><td>13 个 case 定义</td><td>否 (用现有)</td></tr>
+    <tr><td><span class="path">fixtures/</span></td><td>每个 case 的输入文件 (CSV / PDF / PNG / HTML)</td><td>否 (用现有)</td></tr>
+    <tr><td><span class="path">runs/</span></td><td>每个 case 的 agent 产出 (trajectory + output)</td><td>否 (frozen 样本就在这)</td></tr>
+    <tr><td><span class="path">reports/</span></td><td>13 份 evaluation report</td><td><strong>会被重写</strong></td></tr>
+  </table>
+
+  <h3>4.2 一行命令复现全部 13 份 report</h3>
+<pre class="codeblock"><span class="cmt"># 删掉旧 reports (可选, 看你想不想 diff)</span>
+mv reports reports.bak
+
+<span class="cmt"># 批量跑</span>
+python3 scripts/run_all_cases.py
+
+<span class="cmt"># 聚合</span>
+python3 -m mavis_eval report reports --out reports/summary.json
+
+<span class="cmt"># diff 看看跟之前一不一样</span>
+diff -r reports.bak reports | head -50</pre>
+
+  <h3>4.3 验证: 13 份 report 的预期结果</h3>
+  <table>
+    <tr><th>case_id</th><th>难度</th><th>gating</th><th>final</th><th>注释</th></tr>
+    <tr><td><span class="path">travel_plan_001</span></td><td>L4</td><td class="gate-pass">PASS</td><td><span class="pill ok">PASS</span></td><td>高难度多约束规划</td></tr>
+    <tr><td><span class="path">pitch_deck_001</span></td><td>L4</td><td class="gate-pass">PASS</td><td><span class="pill ok">PASS</span></td><td>从笔记+截图出 outline</td></tr>
+    <tr><td><span class="path">bug_triage_001</span></td><td>L3</td><td class="gate-pass">PASS</td><td><span class="pill ok">PASS</span></td></tr>
+    <tr><td><span class="path">calendar_plan_001</span></td><td>L3</td><td class="gate-pass">PASS</td><td><span class="pill ok">PASS</span></td></tr>
+    <tr><td><span class="path">pdf_summary_001</span></td><td>L3</td><td class="gate-pass">PASS</td><td><span class="pill ok">PASS</span></td></tr>
+    <tr><td><span class="path">shopping_compare_001</span></td><td>L3</td><td class="gate-pass">PASS</td><td><span class="pill ok">PASS</span></td></tr>
+    <tr><td><span class="path">web_research_001</span></td><td>L3</td><td class="gate-pass">PASS</td><td><span class="pill ok">PASS</span></td></tr>
+    <tr><td><span class="path">missing_file_recovery_001</span></td><td>L3</td><td class="gate-pass">PASS</td><td><span class="pill ok">PASS</span></td><td>正确澄清 (ambiguity 是能力, 不是 bug)</td></tr>
+    <tr><td><span class="path">receipt_ocr_001</span></td><td>L2</td><td class="gate-pass">PASS</td><td><span class="pill ok">PASS</span></td></tr>
+    <tr><td><span class="path">os_settings_001</span></td><td>L1</td><td class="gate-pass">PASS</td><td><span class="pill ok">PASS</span></td></tr>
+    <tr><td><span class="path">desktop_contracts_001</span></td><td>L3</td><td class="gate-fail">FAIL</td><td><span class="pill bad">FAIL</span></td><td>CSV 列名错 (effective_date 缺失)</td></tr>
+    <tr><td><span class="path">excel_anomaly_001</span></td><td>L3</td><td class="gate-fail">FAIL</td><td><span class="pill bad">FAIL</span></td><td>CSV 列名错 (q1_sales vs previous_quarter_sales)</td></tr>
+    <tr><td><span class="path">email_reply_safe_001</span></td><td>L3</td><td class="gate-pass">PASS</td><td><span class="pill bad">FAIL</span></td><td>gate 全过但 rubric 不达标</td></tr>
+  </table>
+
+  <p style="margin-top: 16px;"><strong>统计:</strong> 13 task, 10 PASS, 3 FAIL。3 个 FAIL 的根因互不相同 (schema 列名 ×2、rubric 不达标 ×1), 证明 benchmark 不是单点测试, 多种失败模式都能拦截。</p>
+
+  <h3>4.4 横向对比 (跨版本回归)</h3>
+  <p>假设你刚跑了一版新模型 v2, 想跟 v1 比:</p>
+<pre class="codeblock"><span class="cmt"># v1 的 reports 存到 reports/v1/, v2 跑出来的存到 reports/v2/</span>
+python3 -m mavis_eval compare \
+  --prior reports/v1 \
+  --new reports/v2 \
+  --out reports/comparison.json
+
+<span class="cmt"># 输出包含:</span>
+<span class="cmt"># - 每个 case 的 v1/v2 pass 状态</span>
+<span class="cmt"># - 整体 pass rate diff + Wilson CI</span>
+<span class="cmt"># - McNemar test 显著性</span></pre>
+</section>
+
+<!-- ==================== 5 读懂 report ==================== -->
+<section id="read-report">
+  <h2><span class="num">05</span>读懂 report</h2>
+  <p class="sub">每份 <span class="path">reports/&lt;case_id&gt;.json</span> 大致长这样:</p>
+
+<pre class="codeblock">{
+  <span class="var">"case_id"</span>: <span class="str">"travel_plan_001"</span>,
+  <span class="var">"title"</span>: <span class="str">"Plan a constrained Tokyo family trip"</span>,
+  <span class="var">"scenario"</span>: <span class="str">"planning_and_decision_support"</span>,
+  <span class="var">"difficulty"</span>: <span class="str">"L4"</span>,
+
+  <span class="cmt">// === 三个 gate 的总判定 ===</span>
+  <span class="var">"gating_pass"</span>: <span class="ok">true</span>,         <span class="cmt">// L1: deterministic gating (file_exists, no_forbidden_tool, ...)</span>
+  <span class="var">"rubric_pass"</span>: <span class="ok">false</span>,        <span class="cmt">// L3: judge rubric, false 因为 judge 没跑</span>
+  <span class="var">"pass"</span>: <span class="ok">true</span>,                <span class="cmt">// final = gating_pass &amp;&amp; (rubric_pass || judge_unavailable_fallback)</span>
+
+  <span class="cmt">// === 详细 assertion 结果 ===</span>
+  <span class="var">"assertions"</span>: {
+    <span class="var">"gating_assertions"</span>: [...],  <span class="cmt">// L1 关卡</span>
+    <span class="var">"quality_assertions"</span>: [...], <span class="cmt">// L2 关卡</span>
+    <span class="var">"failed_gates"</span>: [],         <span class="cmt">// 失败的 assertion 列表</span>
+    <span class="var">"gating_pass"</span>: <span class="ok">true</span>,
+  },
+
+  <span class="cmt">// === judge 部分, 没跑时长这样 ===</span>
+  <span class="var">"judge"</span>: {
+    <span class="var">"available"</span>: <span class="bad">false</span>,
+    <span class="var">"requires_human_audit"</span>: <span class="ok">true</span>   <span class="cmt">// 标记需要人审, 这是 escalation 机制</span>
+  },
+
+  <span class="cmt">// === 元信息 ===</span>
+  <span class="var">"evaluated_at"</span>: <span class="str">"2025-05-15T..."</span>,
+  <span class="var">"schema_version"</span>: <span class="str">"1.0"</span>
+}</pre>
+
+  <h3>5.1 关键字段速查</h3>
+  <table>
+    <tr><th>字段</th><th>含义</th></tr>
+    <tr><td><span class="path">gating_pass</span></td><td>L1 关卡 (硬性约束: 文件在不在、禁用工具有没有用、URL 合不合法)。FAIL 直接淘汰。</td></tr>
+    <tr><td><span class="path">rubric_pass</span></td><td>L3 judge 给的语义评分通不通过。judge 没跑时为 false。</td></tr>
+    <tr><td><span class="path">pass</span></td><td>最终判定。gating fail 一定 fail, gating pass 后视 rubric / quality 决定。</td></tr>
+    <tr><td><span class="path">assertions.failed_gates</span></td><td>所有失败 assertion 的明细, 含 expected / observed / message, 这是 debug 起点。</td></tr>
+    <tr><td><span class="path">requires_human_audit</span></td><td>judge 自评不确定时翻为 true。这是 LLM judge → 人审的 escalation 通道。</td></tr>
+    <tr><td><span class="path">safety_redline</span></td><td>是否踩了安全红线 (例如调了禁用 API、发了禁止域名 URL)。true 直接 fail。</td></tr>
+  </table>
+</section>
+
+<!-- ==================== 6 troubleshooting ==================== -->
+<section id="troubleshooting">
+  <h2><span class="num">06</span>常见问题 (Troubleshooting)</h2>
+
+  <div class="card">
+    <h4>Q: <span class="kbd">mavis-eval validate</span> 报 schema error</h4>
+    <p>case 文件缺字段。看 <span class="path">schemas/case.schema.json</span> 第 200 行 around <span class="path">required</span>, 对照 case 文件补齐。Schema 是 single source of truth。</p>
+  </div>
+
+  <div class="card">
+    <h4>Q: <span class="kbd">run-mavis</span> 报 <span class="path">Cannot find module 'better-sqlite3'</span></h4>
+    <p>这不是你的 bug, 是 Mavis v3.0.27 的已知打包问题。看 <a href="RUNNING_MAVIS.md">RUNNING_MAVIS.md</a> 走 fix 流程。在那之前, 用 <span class="kbd">--deterministic-only</span> 跑现有 frozen runs/, 故事依然成立。</p>
+  </div>
+
+  <div class="card">
+    <h4>Q: report 里 <span class="path">pass=true</span> 但 <span class="path">rubric_pass=false</span>, 矛盾吗</h4>
+    <p>不矛盾。judge (L3) 没跑时, 有一个 "deterministic-only fallback" 规则: gating 全过 + quality 全过 → 整体判 pass, 但标 <span class="path">requires_human_audit=true</span>。这是 demo 第 06 章讲的三道关卡里的 fallback 策略。</p>
+  </div>
+
+  <div class="card">
+    <h4>Q: 我改了一个 case, report 数字变了, 怎么 review</h4>
+    <p>跑 <span class="kbd">python3 -m mavis_eval compare --prior reports.bak --new reports</span>, 它会给你 case 级 diff + 整体 Wilson CI + McNemar 显著性。不要肉眼比 13 个 JSON 文件。</p>
+  </div>
+
+  <div class="card">
+    <h4>Q: judge 用什么模型最合适</h4>
+    <p>当前 prompt 是 model-agnostic。GPT-4 / Claude Sonnet / Gemini 2.5 都能跑。Demo 第 08 章里讲了为什么 judge 不能信 agent 的 self-reasoning, 只能看 trajectory + final artifact。如果你接的模型不支持 strict JSON output, 加一个 retry 包装层。</p>
+  </div>
+
+  <div class="card">
+    <h4>Q: 我想加一个新 case</h4>
+    <p>三步: (1) 在 <span class="path">cases/examples/smoke_seed_cases.json</span> 里加一个 case object, 按 schema; (2) 在 <span class="path">fixtures/&lt;new_case_id&gt;/</span> 放输入文件; (3) 在 <span class="path">runs/&lt;new_case_id&gt;/</span> 准备 agent 产出 (或用 <span class="kbd">run-mavis</span> 让 Mavis 实际跑一次)。然后跑 <span class="kbd">validate</span> + <span class="kbd">evaluate</span>。</p>
+  </div>
+</section>
+
+<!-- ==================== 7 一页速查 ==================== -->
+<section id="one-pager">
+  <h2><span class="num">07</span>一页速查 (Cheat Sheet)</h2>
+
+<pre class="codeblock"><span class="cmt"># === 评估单个 case (最常用) ===</span>
+python3 -m mavis_eval evaluate cases/examples/smoke_seed_cases.json \
+  --case-id &lt;CASE_ID&gt; \
+  --run-dir runs/&lt;CASE_ID&gt; \
+  --deterministic-only \
+  --out reports/&lt;CASE_ID&gt;.json
+
+<span class="cmt"># === 批量跑全部 13 个 case ===</span>
+python3 scripts/run_all_cases.py
+
+<span class="cmt"># === 聚合 ===</span>
+python3 -m mavis_eval report reports --out reports/summary.json
+
+<span class="cmt"># === 跨版本对比 ===</span>
+python3 -m mavis_eval compare --prior reports/v1 --new reports/v2 --out reports/diff.json
+
+<span class="cmt"># === 真实跑 Mavis (需要 daemon 健康) ===</span>
+python3 -m mavis_eval run-mavis cases/examples/smoke_seed_cases.json \
+  --case-id &lt;CASE_ID&gt; --fixtures-root fixtures --timeout-s 300
+
+<span class="cmt"># === 接 LLM judge ===</span>
+python3 -m mavis_eval judge-payload ... --out judge_payloads/X.json
+<span class="cmt"># &lt;调 LLM, 把返回的 JSON 存到 judge_results/X.json&gt;</span>
+python3 -m mavis_eval evaluate ... --judge-result judge_results/X.json --out reports/X.json
+
+<span class="cmt"># === 验证 case schema ===</span>
+python3 -m mavis_eval validate cases/examples
+
+<span class="cmt"># === 列出所有 case ===</span>
+python3 -m mavis_eval list-cases cases/examples</pre>
+</section>
+
+<footer>
+  <p>Mavis-Eval RUNBOOK v0.1 · 配套 <a href="demo.html">demo.html</a> (设计文档) · <a href="GDPVAL_ALIGNMENT.md">GDPVAL_ALIGNMENT.md</a> (锚点映射) · <a href="ASSERTION_DSL.md">ASSERTION_DSL.md</a> (assertion 语法) · <a href="RUNNING_MAVIS.md">RUNNING_MAVIS.md</a> (真实 Mavis 启动 SOP)</p>
+</footer>
+
+</div>
+
+</body>
+</html>

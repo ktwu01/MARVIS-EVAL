@@ -1,19 +1,37 @@
-# Running Mavis Locally — SOP
+# Running Mavis Locally (SOP)
 
 This SOP covers the version of Mavis observed on this workstation:
 **MiniMax.app v3.0.27 (electron)**, with a bundled daemon-management CLI
+at `/Applications/MiniMax.app/Contents/Resources/resources/daemon/cli.js`,
 symlinked at `~/.mavis/bin/mavis`.
 
 Important terminology:
 
 - `mmx` / `mmx-cli` is the public MiniMax platform CLI documented by
-  MiniMax and installable with `npm install -g mmx-cli`.
+  MiniMax and installable with `npm install -g mmx-cli`. **We do not use
+  it here.**
 - `mavis` is the desktop-app-bundled local daemon CLI installed as a side
-  effect of installing `MiniMax.app` from the DMG. As of this workstation's
-  v3.0.27 install, it is not a separately documented public CLI.
+  effect of installing `MiniMax.app` from the DMG. **This is what
+  Mavis-Eval drives.** It is not separately documented in public MiniMax
+  docs as of this writing.
 
 The goal is a healthy, locally running Mavis daemon that the Mavis-Eval
-harness (`python3 -m mavis_eval run-mavis ...`) can drive.
+harness (`python3 -m mavis_eval run-mavis ...`) can connect to.
+
+---
+
+## TL;DR (the working recipe on v3.0.27)
+
+1. **Open the MiniMax desktop app** (`/Applications/MiniMax.app`).
+2. Wait ~2 seconds. The Electron app starts its own daemon as a
+   subprocess; you do not need to run `mavis start`.
+3. From your terminal, verify and drive it with `~/.mavis/bin/mavis ...`.
+
+Skip the desktop app and run `mavis start` directly on v3.0.27 and the
+daemon crashes with `Cannot find module 'better-sqlite3'`. The desktop
+app sidesteps that bug because it launches the daemon under Electron's
+Node runtime, which can see the bundled native module. See
+[§5](#5-known-failure-mavis-start-without-the-desktop-app) for details.
 
 ---
 
@@ -21,60 +39,115 @@ harness (`python3 -m mavis_eval run-mavis ...`) can drive.
 
 | Path | Role |
 |------|------|
-| `/Applications/MiniMax.app/Contents/MacOS/MiniMax` | Electron desktop binary |
+| `/Applications/MiniMax.app/Contents/MacOS/MiniMax` | Electron desktop binary; opening this starts the daemon |
 | `/Applications/MiniMax.app/Contents/Resources/resources/daemon/cli.js` | Daemon CLI entry |
 | `/Applications/MiniMax.app/Contents/Resources/resources/daemon/daemon.js` | Daemon process |
-| `/Applications/MiniMax.app/Contents/Resources/app.asar.unpacked/node_modules/better-sqlite3/` | Native SQLite module (Mach-O arm64) |
-| `~/.mavis/bin/mavis` | Symlink → daemon `cli.js`; this is what should be on `PATH` after the DMG install |
-| `~/.mavis/` | Per-user data dir: `sqlite.db`, `sessions/`, `logs/`, `config.yaml`, … |
-| `~/.mavis/logs/` | Daemon spawn + plugin logs; check here when the daemon won't start |
+| `/Applications/MiniMax.app/Contents/Resources/app.asar.unpacked/node_modules/better-sqlite3/` | Native SQLite module (Mach-O arm64, ABI matched to Electron's Node) |
+| `~/.mavis/bin/mavis` | Symlink → daemon `cli.js`. Use it via absolute path; it may not be on `$PATH` after a fresh install |
+| `~/.mavis/` | Per-user data dir: `sqlite.db`, `sessions/`, `logs/`, `config.yaml` |
+| `~/.mavis/daemon.pid` | JSON. When `owner` is `electron`, the daemon was started by the desktop app |
+| `~/.mavis/daemon.port` | Currently active daemon port (dynamic; **not** 5321 in v3.0.27, observed 15321 on this workstation) |
 
-The CLI uses port **5321** by default. Override with `--port <N>` or
-`MAVIS_PORT=N`.
-
-`mavis start` uses the current shell's Node runtime through the `#!/usr/bin/env
-node` shebang. On this workstation, system Node is `v26.0.0`, while the native
-SQLite module bundled in the app was built for Electron's Node `v22.20.0`.
+The CLI talks to the daemon over local HTTP on whatever port is in
+`~/.mavis/daemon.port`. **Do not hard-code 5321** in scripts; read it from
+that file or call `mavis status`.
 
 ---
 
 ## 2. One-time setup
 
 ```sh
-# 1. Confirm the CLI is on PATH
-which mavis                    # should print /Users/<you>/.mavis/bin/mavis
-mavis --version                # 3.0.27 (or later)
+# 1. Install MiniMax.app from the official DMG (manual step in the GUI).
 
-# 2. If `which mavis` returns nothing, add ~/.mavis/bin to PATH:
+# 2. Add the CLI to PATH (optional; you can also call ~/.mavis/bin/mavis
+#    directly):
 echo 'export PATH="$HOME/.mavis/bin:$PATH"' >> ~/.zshrc
 source ~/.zshrc
+which mavis                    # /Users/<you>/.mavis/bin/mavis
+mavis --version                # 3.0.27 (or later)
 ```
+
+If `which mavis` still returns nothing after editing `~/.zshrc`, use the
+absolute path `~/.mavis/bin/mavis` everywhere below. Mavis-Eval's
+adapter already accepts an explicit CLI path; it does not require `mavis`
+to be on `$PATH`.
 
 ---
 
-## 3. Start, status, stop
+## 3. Start the daemon (happy path)
+
+The supported way on v3.0.27:
 
 ```sh
-mavis status                   # {"status": "stopped"}  or  running info
-mavis start --no-web           # start daemon, don't open browser
-mavis status                   # confirm running
-mavis stop                     # clean shutdown
+# 1. Open the desktop app. This starts the daemon under Electron's Node.
+open /Applications/MiniMax.app
+
+# 2. Wait a couple of seconds, then verify the daemon is healthy.
+~/.mavis/bin/mavis status
+# {
+#   "status": "running",
+#   "pid": 51801,
+#   "port": 15321,
+#   "uptimeSeconds": 0
+# }
+
+# 3. Confirm the daemon really was started by the desktop app
+#    (owner: "electron"). This is the marker that you are on the
+#    happy path, not on a partial CLI-only start.
+cat ~/.mavis/daemon.pid
+# {"pid":51801,"owner":"electron","startedAt":"2026-05-17T07:22:25.638Z"}
+
+# 4. Smoke test: list agents.
+~/.mavis/bin/mavis agent list | head -10
 ```
 
-Useful flags:
+You can leave the desktop app open in the background; you do not need to
+interact with its GUI for the CLI to work.
 
-- `--no-web` — don't open the web UI in your browser.
-- `--no-service` — don't register a launchd service (dev use).
-- `--port 5321` — pin port.
-- `--data-dir ~/.mavis` — pin data dir.
+To stop the daemon, quit the MiniMax app from the macOS menu bar. The
+daemon shuts down with it.
 
 ---
 
-## 4. Known failure: `Cannot find module 'better-sqlite3'`
+## 4. Drive a Mavis session from the CLI
+
+Once the daemon is up (i.e. `mavis status` shows `running`), Mavis-Eval
+can drive it:
+
+```sh
+cd ~/Documents/dev/MARVIS-EVAL
+
+python3 -m mavis_eval run-mavis cases/examples/smoke_seed_cases.json \
+  --case-id missing_file_recovery_001 \
+  --fixtures-root fixtures \
+  --timeout-s 300
+```
+
+Expected on success: a new run dir under `runs/missing_file_recovery_001/`
+with `trajectory.jsonl`, a JSON report under `reports/`, and a JSON
+summary on stdout.
+
+You can also call the CLI directly to sanity-check:
+
+```sh
+~/.mavis/bin/mavis session new mavis \
+  --from root \
+  --workspace "$PWD" \
+  --prompt "Say OK and stop."
+~/.mavis/bin/mavis session info <session-id>
+```
+
+All Mavis sessions are persisted in `~/.mavis/sqlite.db`. Mavis-Eval's
+`scripts/export_from_mavis_db.py` reads from there to reconstruct
+`runs/<case_id>/` if the workspace files were cleaned up.
+
+---
+
+## 5. Known failure: `mavis start` without the desktop app
 
 ### Symptom
 ```
-$ mavis
+$ mavis start --no-web
   启动 Daemon ...
   等待 Daemon 就绪 ...
 Error: Daemon exited immediately (code: 1, signal: null)
@@ -92,126 +165,98 @@ but the daemon (`daemon.js`) is launched from
 `/Applications/MiniMax.app/Contents/Resources/resources/daemon/` whose
 `node_modules/` does **not** contain that package. `daemon.js` does
 `createRequire(import.meta.url)("better-sqlite3")`, which only searches
-upward from `resources/daemon/`, so resolution fails.
+upward from `resources/daemon/`, so resolution fails when the daemon is
+spawned under system Node.
+
+The desktop app avoids this because it spawns the daemon as a child of
+the Electron process, where the Electron-bundled Node ABI matches the
+native `.node` file and the unpacked `node_modules` are reachable.
 
 The daemon does support an env override (`MAVIS_SQLITE3_MODULE_PATH`),
-**but the CLI strips that key before spawning the daemon child process**
-(see `cli.js` → `spawnDaemon` → `buildChildEnv("spawn-daemon", { … })` —
-only `MAVIS_REGION` and `MAVIS_BUILD_ENV` are re-injected). Setting the
-env var in your shell does **not** propagate to the daemon.
+**but `cli.js`'s `spawnDaemon` strips that key before spawning the
+daemon child process** (only `MAVIS_REGION` and `MAVIS_BUILD_ENV` are
+re-injected). Setting the env var in your shell does **not** propagate
+to the daemon when you use `mavis start`.
 
-The unpacked native module was built for Electron's Node ABI. On this
-workstation:
+ABI check, for the curious:
 
 ```sh
 node -p 'process.version + " " + process.versions.modules'
-# v26.0.0 147
+# v26.0.0 147   <- system Node
 
 ELECTRON_RUN_AS_NODE=1 /Applications/MiniMax.app/Contents/MacOS/MiniMax \
   -e 'console.log(process.version, process.versions.modules)'
-# v22.20.0 139
+# v22.20.0 139   <- Electron's bundled Node
+
+# The bundled .node file was built for ABI 139. Loading it from system
+# Node (ABI 147) fails with:
+#   better_sqlite3.node was compiled against NODE_MODULE_VERSION 139.
+#   This version of Node.js requires NODE_MODULE_VERSION 147.
 ```
 
-So forcing system Node to load the unpacked native module fails with:
+### Fix path
 
-```text
-better_sqlite3.node was compiled against NODE_MODULE_VERSION 139.
-This version of Node.js requires NODE_MODULE_VERSION 147.
+**Preferred:** open the desktop app and let Electron spawn the daemon
+(§3 above). This is the recipe that works on v3.0.27 today.
+
+**Last-resort manual start, only if the desktop app is unavailable:**
+spawn the daemon directly under Electron's Node:
+
+```sh
+export PATH="/Applications/MiniMax.app/Contents/Resources/resources/opencode:$HOME/.mavis/bin:$PATH"
+
+NODE_PATH="/Applications/MiniMax.app/Contents/Resources/resources/daemon/node_modules" \
+MAVIS_SQLITE3_MODULE_PATH="/Applications/MiniMax.app/Contents/Resources/app.asar.unpacked/node_modules" \
+ELECTRON_RUN_AS_NODE=1 \
+/Applications/MiniMax.app/Contents/MacOS/MiniMax \
+  /Applications/MiniMax.app/Contents/Resources/resources/daemon/daemon.js \
+  --port 15321 \
+  --data-dir "$HOME/.mavis" \
+  > "$HOME/.mavis/logs/manual-daemon.log" 2>&1 &
+
+~/.mavis/bin/mavis status
 ```
 
-`/Applications/MiniMax.app/Contents/Resources/resources/daemon/node_modules/`
-is part of the app bundle. Mutating it by hand is fragile and may break the
-desktop app bundle.
-
-### Fix path (in order of preference)
-
-1. **Update/reinstall MiniMax.app from the official desktop distribution.**
-   This is the correct fix because the daemon, native SQLite module, Electron
-   runtime, and bundled `opencode` binary need to agree with each other.
-   ```sh
-   ~/.mavis/bin/mavis --version
-   ~/.mavis/bin/mavis status
-   ```
-2. **Use the desktop app to manage daemon lifecycle** if it is available.
-   The public May 2026 messaging says CLI/API/Agent are included in the
-   subscription, but public MiniMax docs currently document `mmx-cli`; this
-   local `mavis` CLI is bundled with the desktop app.
-3. **Temporary local workaround for evaluation only:** start the daemon with
-   Electron's Node runtime, and make both bundled native modules and bundled
-   `opencode` visible:
-   ```sh
-   export PATH="/Applications/MiniMax.app/Contents/Resources/resources/opencode:$HOME/.mavis/bin:$PATH"
-
-   NODE_PATH="/Applications/MiniMax.app/Contents/Resources/resources/daemon/node_modules" \
-   MAVIS_SQLITE3_MODULE_PATH="/Applications/MiniMax.app/Contents/Resources/app.asar.unpacked/node_modules" \
-   ELECTRON_RUN_AS_NODE=1 \
-   /Applications/MiniMax.app/Contents/MacOS/MiniMax \
-     /Applications/MiniMax.app/Contents/Resources/resources/daemon/daemon.js \
-     --port 5321 \
-     --data-dir "$HOME/.mavis" \
-     > "$HOME/.mavis/logs/manual-daemon.log" 2>&1 &
-
-   ~/.mavis/bin/mavis status
-   ~/.mavis/bin/mavis agent list
-   ```
-   This bypasses `mavis start`; use it only as a local unblocker.
-4. **File a bug to MiniMax** if reinstall/update does not resolve it — this is a
-   packaging bug, not a user-recoverable misconfiguration. Include:
-   - `mavis --version`
-   - `~/.mavis/logs/daemon-spawn.log` tail
-   - `node --version`
-   - `ls /Applications/MiniMax.app/Contents/Resources/app.asar.unpacked/node_modules/better-sqlite3` (should show files)
-   - `ls /Applications/MiniMax.app/Contents/Resources/resources/daemon/node_modules/ | grep sqlite` (will be empty — the bug)
+This bypasses `mavis start` and reproduces what the desktop app does.
+Use it only when you cannot run the GUI (CI, headless server, etc.).
 
 ### What NOT to try
-- `export MAVIS_SQLITE3_MODULE_PATH=...` — the CLI strips it on spawn; harmless but a dead end.
-- `npm install better-sqlite3 -g` and adding to `NODE_PATH` — system Node and Electron Node have different native module ABIs here.
-- Editing files under `/Applications/MiniMax.app` — read-only without `sudo` and breaks code signing.
+- `mavis start` (or `mavis start --no-web`) without the desktop app open
+  on v3.0.27. It fails as documented above.
+- `export MAVIS_SQLITE3_MODULE_PATH=...` before `mavis start`. The CLI
+  strips it before spawning the daemon.
+- `npm install better-sqlite3 -g` and adding to `NODE_PATH`. System Node
+  and Electron Node have different native module ABIs here, so the
+  globally-installed copy will not load anyway.
+- Editing files under `/Applications/MiniMax.app`. The directory is
+  read-only without `sudo`, and modifying app contents breaks code
+  signing.
 - Relying on `mavis update --force` as the primary fix in v3.0.27. This
   command is hard-coded to install `@minimax/mavis` from
-  `https://npmmirror.xaminim.com/`; on this workstation that registry timed out,
-  and the package is not visible on the public npm registry.
+  `https://npmmirror.xaminim.com/`; on this workstation that registry
+  timed out, and the package is not visible on the public npm registry.
 
 ### Quick triage
+
 ```sh
-mavis --version                           # CLI itself is fine — it doesn't need sqlite
+~/.mavis/bin/mavis --version                                      # the CLI itself is fine; it doesn't need sqlite
 ls /Applications/MiniMax.app/Contents/Resources/resources/daemon/node_modules/ | grep -i sqlite
-# Empty result = the packaging bug. Update/reinstall MiniMax.app, or use the
-# Electron-Node workaround above for local evaluation.
+# Empty result = the packaging bug. Open the desktop app instead.
+
+cat ~/.mavis/daemon.pid 2>/dev/null
+# If "owner":"electron", desktop app is driving the daemon (happy path).
+# If absent or owner is something else, daemon is not running or was
+# started a different way.
 ```
-
----
-
-## 5. Smoke test once daemon is up
-
-```sh
-mavis status                              # {"status": "running", "port": 5321, ...}
-mavis agent list                          # at least the built-in agents
-mavis session new mavis --from root --workspace "$PWD" --prompt "Say OK and stop."
-mavis session info <session-id>
-```
-
-For end-to-end harness verification:
-
-```sh
-cd ~/Documents/dev/MARVIS-EVAL
-python3 -m mavis_eval run-mavis cases/examples/smoke_seed_cases.json \
-  --case-id missing_file_recovery_001 \
-  --fixtures-root fixtures \
-  --timeout-s 300
-```
-
-Expected: a new run dir under `runs/missing_file_recovery_001/` with
-`trajectory.jsonl`, an evaluator report under `reports/`, and JSON
-summary printed to stdout.
 
 ---
 
 ## 6. Logs to check when something is wrong
 
-- `~/.mavis/logs/daemon-spawn.log` — exit reasons for failed daemon launches.
-- `~/.mavis/logs/opencode-*.log` — agent runtime log (timestamped).
-- `~/.mavis/logs/plugin-*.log` — plugin runtime log.
+- `~/.mavis/logs/daemon-spawn-*.log`: exit reasons for failed daemon
+  launches via `mavis start`. The most useful single log.
+- `~/.mavis/logs/opencode-*.log`: agent runtime log (timestamped).
+- `~/.mavis/logs/plugin-*.log`: plugin runtime log.
 
 Tail the freshest log:
 ```sh
@@ -223,12 +268,14 @@ ls -t ~/.mavis/logs/*.log | head -1 | xargs tail -n 200
 ## 7. Clean reset (when in doubt)
 
 ```sh
-mavis stop || true
+# Quit MiniMax from the macOS menu bar first, then:
 rm -f ~/.mavis/daemon.lock ~/.mavis/daemon.pid ~/.mavis/daemon.port
-# Optional: archive (do not delete) sqlite.db before reinstall
+
+# Optional: archive (do not delete) sqlite.db before a reinstall.
 mv ~/.mavis/sqlite.db ~/.mavis/sqlite.db.bak.$(date +%s)
-# Then update/reinstall MiniMax.app from the official desktop installer.
+
+# Reinstall MiniMax.app from the official DMG, then reopen it.
 ```
 
-Do **not** delete `~/.mavis/` wholesale — it holds your agents, sessions,
+Do **not** delete `~/.mavis/` wholesale. It holds your agents, sessions,
 credentials, and memory.

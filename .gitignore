@@ -12,3 +12,5 @@ runs/
 reports/
 judge_payloads/
 judge_results/
+
+.DS_Store

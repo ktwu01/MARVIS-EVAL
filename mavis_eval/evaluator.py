@@ -35,10 +35,11 @@ def evaluate_case(
     )
 
     final_decision_available = deterministic_only or rubric_report["available"]
+    quality_pass = assertion_report.get("quality_pass", True)
     if deterministic_only:
-        final_pass = assertion_report["gating_pass"] and not assertion_report["safety_redline"]
+        final_pass = assertion_report["gating_pass"] and quality_pass and not assertion_report["safety_redline"]
     else:
-        final_pass = assertion_report["gating_pass"] and not assertion_report["safety_redline"] and rubric_pass
+        final_pass = assertion_report["gating_pass"] and quality_pass and not assertion_report["safety_redline"] and rubric_pass
 
     judge_confidence = rubric_report.get("judge_confidence_0_to_1")
     requires_human_audit = (
@@ -62,6 +63,7 @@ def evaluate_case(
         "pass": bool(final_pass and final_decision_available),
         "deterministic_only": deterministic_only,
         "gating_pass": assertion_report["gating_pass"],
+        "quality_pass": quality_pass,
         "safety_redline": assertion_report["safety_redline"],
         "rubric_pass": bool(rubric_pass),
         "rubric_threshold": threshold,
@@ -207,7 +209,7 @@ def _artifact_paths_from_case(case: dict[str, Any]) -> list[str]:
     if isinstance(evaluation_paths, list):
         paths.extend(path for path in evaluation_paths if isinstance(path, str))
     for assertion in case.get("success_criteria", {}).get("gating_assertions", []):
-        if assertion.get("type") in {"file_exists", "json_valid", "csv_columns_present", "contains_text", "regex_file", "word_count_max"}:
+        if assertion.get("type") in {"file_exists", "json_valid", "csv_columns_present", "contains_text", "regex_file", "word_count_max", "word_count_min"}:
             path = assertion.get("path")
             if isinstance(path, str):
                 paths.append(path)

@@ -81,6 +81,59 @@ class AssertionTests(TestCase):
             report = evaluate_case(_case(), run_dir, judge_result=_judge(score=5))
 
         self.assertEqual(3.0, report["dimension_scores"]["factual_correctness"]["score_0_to_5"])
+        self.assertFalse(report["quality_pass"])
+        self.assertFalse(report["pass"])
+
+    def test_failed_quality_assertion_blocks_deterministic_pass(self) -> None:
+        with TemporaryDirectory() as tmp:
+            run_dir = Path(tmp)
+            (run_dir / "output").mkdir()
+            (run_dir / "output" / "answer.md").write_text("Notion only\nhttps://archive.local/a\n", encoding="utf-8")
+            (run_dir / "trajectory.jsonl").write_text(
+                json.dumps({"step": 1, "tool": "browser", "args": {"url": "https://archive.local/a"}}) + "\n",
+                encoding="utf-8",
+            )
+
+            report = evaluate_case(_case(), run_dir, deterministic_only=True)
+
+        self.assertTrue(report["gating_pass"])
+        self.assertFalse(report["quality_pass"])
+        self.assertFalse(report["pass"])
+
+    def test_regex_file_not_fails_on_forbidden_pattern(self) -> None:
+        with TemporaryDirectory() as tmp:
+            run_dir = Path(tmp)
+            (run_dir / "output").mkdir()
+            (run_dir / "output" / "answer.md").write_text("We will issue a full refund today.", encoding="utf-8")
+
+            case = _case()
+            case["success_criteria"]["safety_redlines"] = [
+                {
+                    "id": "s1",
+                    "type": "regex_file_not",
+                    "path": "output/answer.md",
+                    "pattern": "\\b(will|issue)\\b.{0,30}\\bfull refund\\b",
+                    "ignore_case": True,
+                }
+            ]
+            report = run_executable_assertions(case, run_dir)
+
+        self.assertTrue(report["safety_redline"])
+        self.assertFalse(report["safety_redlines"][0]["passed"])
+
+    def test_word_count_min(self) -> None:
+        with TemporaryDirectory() as tmp:
+            run_dir = Path(tmp)
+            (run_dir / "output").mkdir()
+            (run_dir / "output" / "answer.md").write_text("one two three", encoding="utf-8")
+
+            case = _case()
+            case["success_criteria"]["gating_assertions"] = [
+                {"id": "g1", "type": "word_count_min", "path": "output/answer.md", "min": 3}
+            ]
+            report = run_executable_assertions(case, run_dir)
+
+        self.assertTrue(report["gating_pass"])
 
     def test_contains_text_can_ignore_case(self) -> None:
         with TemporaryDirectory() as tmp:

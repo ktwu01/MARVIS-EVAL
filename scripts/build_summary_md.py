@@ -55,6 +55,18 @@ def render_slice_table(slices: dict, label: str) -> str:
     return "\n".join(rows) + "\n"
 
 
+def top_failure(report: dict) -> str:
+    assertions = report.get("assertions", {})
+    for key in ("failed_gates", "failed_quality_assertions"):
+        failures = assertions.get(key, [])
+        if failures:
+            return failures[0].get("message", "")[:80]
+    for redline in assertions.get("safety_redlines", []):
+        if not redline.get("passed", True):
+            return redline.get("message", "")[:80]
+    return ""
+
+
 def main() -> int:
     if not SUMMARY_JSON.exists():
         print(f"ERROR: {SUMMARY_JSON} missing. Run `python3 -m mavis_eval report reports --out reports/summary.json` first.")
@@ -74,17 +86,17 @@ def main() -> int:
     lines.append("Deterministic evaluation only (L1 gating + L2 quality). LLM judge (L3) is not part of these numbers.\n")
 
     lines.append("## Per-case results\n")
-    lines.append("| case_id | difficulty | scenario | gating | final | top failure |")
-    lines.append("|---|---|---|---|---|---|")
+    lines.append("| case_id | difficulty | scenario | gating | quality | final | top failure |")
+    lines.append("|---|---|---|---|---|---|---|")
     for r in sorted(reports, key=lambda x: (not x.get("pass"), x.get("case_id", ""))):
         cid = r.get("case_id", "?")
         diff = r.get("difficulty", "?")
         scen = r.get("scenario", "?")
         gp = "✓" if r.get("gating_pass") else "✗"
+        qp = "✓" if r.get("quality_pass", True) else "✗"
         fp = "✓ PASS" if r.get("pass") else "✗ FAIL"
-        fails = r.get("assertions", {}).get("failed_gates", [])
-        msg = fails[0].get("message", "")[:80] if fails else ""
-        lines.append(f"| `{cid}` | {diff} | {scen} | {gp} | {fp} | {msg} |")
+        msg = top_failure(r)
+        lines.append(f"| `{cid}` | {diff} | {scen} | {gp} | {qp} | {fp} | {msg} |")
     lines.append("")
 
     lines.append("## By difficulty\n")

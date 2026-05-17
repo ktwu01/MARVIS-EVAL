@@ -45,11 +45,14 @@ def run_executable_assertions(case: dict[str, Any], run_dir: Path) -> dict[str, 
     ]
 
     gating_pass = all(result.passed for result in gating_results)
+    quality_pass = all(result.passed for result in quality_results)
     safety_redline = any(not result.passed for result in safety_results)
 
     return {
         "gating_pass": gating_pass,
+        "quality_pass": quality_pass,
         "failed_gates": [result.to_dict() for result in gating_results if not result.passed],
+        "failed_quality_assertions": [result.to_dict() for result in quality_results if not result.passed],
         "gating_assertions": [result.to_dict() for result in gating_results],
         "quality_assertions": [result.to_dict() for result in quality_results],
         "quality_dimension_caps": quality_dimension_caps,
@@ -237,6 +240,21 @@ def _regex_file(assertion: dict[str, Any], _case: dict[str, Any], run_dir: Path,
     )
 
 
+def _regex_file_not(assertion: dict[str, Any], _case: dict[str, Any], run_dir: Path, _trajectory: list[dict[str, Any]]) -> AssertionResult:
+    path = _safe_path(run_dir, assertion["path"])
+    text = path.read_text(encoding="utf-8")
+    flags = re.IGNORECASE if assertion.get("ignore_case") else 0
+    matches = re.findall(assertion["pattern"], text, flags)
+    return AssertionResult(
+        assertion["id"],
+        assertion["type"],
+        len(matches) == 0,
+        "no regex matches found" if not matches else f"{len(matches)} forbidden regex matches found",
+        expected={"==": 0, "pattern": assertion["pattern"]},
+        observed=len(matches),
+    )
+
+
 def _word_count_max(assertion: dict[str, Any], _case: dict[str, Any], run_dir: Path, _trajectory: list[dict[str, Any]]) -> AssertionResult:
     path = _safe_path(run_dir, assertion["path"])
     words = re.findall(r"\S+", path.read_text(encoding="utf-8"))
@@ -247,6 +265,20 @@ def _word_count_max(assertion: dict[str, Any], _case: dict[str, Any], run_dir: P
         len(words) <= maximum,
         f"word count {len(words)} <= {maximum}" if len(words) <= maximum else f"word count {len(words)} > {maximum}",
         expected={"<=": maximum},
+        observed=len(words),
+    )
+
+
+def _word_count_min(assertion: dict[str, Any], _case: dict[str, Any], run_dir: Path, _trajectory: list[dict[str, Any]]) -> AssertionResult:
+    path = _safe_path(run_dir, assertion["path"])
+    words = re.findall(r"\S+", path.read_text(encoding="utf-8"))
+    minimum = int(assertion["min"])
+    return AssertionResult(
+        assertion["id"],
+        assertion["type"],
+        len(words) >= minimum,
+        f"word count {len(words)} >= {minimum}" if len(words) >= minimum else f"word count {len(words)} < {minimum}",
+        expected={">=": minimum},
         observed=len(words),
     )
 
@@ -345,7 +377,9 @@ _ASSERTION_HANDLERS = {
     "csv_row_count_min": _csv_row_count_min,
     "contains_text": _contains_text,
     "regex_file": _regex_file,
+    "regex_file_not": _regex_file_not,
     "word_count_max": _word_count_max,
+    "word_count_min": _word_count_min,
     "tool_called": _tool_called,
     "tool_not_called": _tool_not_called,
     "no_forbidden_tool": _no_forbidden_tool,

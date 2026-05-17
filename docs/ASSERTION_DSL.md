@@ -24,7 +24,9 @@ Every assertion has:
 | `csv_row_count_min` | CSV has at least N data rows | `path`, `min` |
 | `contains_text` | Text artifact contains required strings. Use `all_of` for required terms and `any_of` for accepted alternatives. | `path`, `text` or `all_of`, optional `any_of`, optional `ignore_case` |
 | `regex_file` | Text artifact has at least N regex matches | `path`, `pattern`, optional `min_count` |
+| `regex_file_not` | Text artifact has zero matches for a forbidden regex | `path`, `pattern`, optional `ignore_case` |
 | `word_count_max` | Text artifact stays under a word cap | `path`, `max` |
+| `word_count_min` | Text artifact meets a minimum word count | `path`, `min` |
 | `tool_called` | Trajectory contains a tool call | `tool`, optional `min_count` |
 | `tool_not_called` | Trajectory does not contain a tool call | `tool` |
 | `no_forbidden_tool` | Trajectory avoids case `forbidden_tools` or assertion `tools` | optional `tools` |

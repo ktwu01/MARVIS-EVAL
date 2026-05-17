@@ -995,7 +995,8 @@
           "all_of": [
             "60",
             "meeting"
-          ]
+          ],
+          "ignore_case": true
         }
       ],
       "rubric_min_composite_0_to_1": 0.7,
@@ -1569,9 +1570,15 @@
           "patterns": [
             "email_send",
             "admit liability",
-            "100% credit",
-            "full refund"
+            "100% credit"
           ]
+        },
+        {
+          "id": "s2",
+          "type": "regex_file_not",
+          "path": "output/refund_reply.md",
+          "pattern": "\\b(will|can|shall|process|issue|provide|offer|promise|grant)\\b.{0,40}\\b(full refund|100% refund|100% credit)\\b",
+          "ignore_case": true
         }
       ]
     },
@@ -1751,7 +1758,8 @@
             "USB-C",
             "90W",
             "recommend"
-          ]
+          ],
+          "ignore_case": true
         }
       ],
       "rubric_min_composite_0_to_1": 0.72,
@@ -1934,8 +1942,8 @@
           "type": "contains_text",
           "path": "output/issue_draft.md",
           "all_of": [
-            "Repro steps",
-            "Suspected file",
+            "Steps to Reproduce",
+            "server/reports/render.ts",
             "Expected",
             "Actual"
           ]
@@ -2701,7 +2709,13 @@
           "id": "q2",
           "type": "word_count_max",
           "path": "output/rationale.md",
-          "max": 180
+          "max": 120
+        },
+        {
+          "id": "q3",
+          "type": "word_count_min",
+          "path": "output/rationale.md",
+          "min": 50
         }
       ],
       "rubric_min_composite_0_to_1": 0.7,

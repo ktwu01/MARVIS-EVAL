@@ -1,0 +1,31 @@
+server/
+  api/
+    handlers/
+      reports.ts
+      auth.ts
+    middleware/
+      logger.ts
+    routes.ts
+  reports/
+    export.ts
+    render.ts
+    templates.ts
+  models/
+    report.ts
+    user.ts
+  index.ts
+web/
+  pages/
+    dashboard.tsx
+    reports/
+      export.tsx
+  components/
+    ReportPreview.tsx
+shared/
+  schema.ts
+tests/
+  reports/
+    render.test.ts
+    export.test.ts
+package.json
+tsconfig.json

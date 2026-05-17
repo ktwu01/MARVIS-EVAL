@@ -43,6 +43,22 @@ def main(argv: list[str] | None = None) -> int:
     compare_parser.add_argument("--new", required=True, nargs="+", type=Path)
     compare_parser.add_argument("--out", type=Path)
 
+    run_parser = subparsers.add_parser(
+        "run-mavis",
+        help="Launch local Mavis CLI against a case and evaluate deterministically.",
+    )
+    run_parser.add_argument("case", type=Path)
+    run_parser.add_argument("--case-id", required=True)
+    run_parser.add_argument("--runs-root", type=Path, default=Path("runs"))
+    run_parser.add_argument("--reports-root", type=Path, default=Path("reports"))
+    run_parser.add_argument("--fixtures-root", type=Path, default=None)
+    run_parser.add_argument("--cli-path", default=None)
+    run_parser.add_argument("--agent", default="mavis")
+    run_parser.add_argument("--model", default=None)
+    run_parser.add_argument("--timeout-s", type=float, default=900.0)
+    run_parser.add_argument("--poll-interval-s", type=float, default=2.0)
+    run_parser.add_argument("--prompt-suffix", default="")
+
     args = parser.parse_args(argv)
 
     if args.command == "validate":
@@ -57,6 +73,8 @@ def main(argv: list[str] | None = None) -> int:
         return _report(args)
     if args.command == "compare":
         return _compare(args)
+    if args.command == "run-mavis":
+        return _run_mavis(args)
     parser.error(f"unknown command {args.command}")
     return 2
 
@@ -114,6 +132,41 @@ def _report(args: argparse.Namespace) -> int:
     else:
         print(json.dumps(summary, indent=2, sort_keys=True))
     return 0
+
+
+def _run_mavis(args: argparse.Namespace) -> int:
+    from .adapters.mavis_runner import RunnerConfig, run_case
+
+    config = RunnerConfig(
+        case_file=args.case,
+        case_id=args.case_id,
+        runs_root=args.runs_root,
+        reports_root=args.reports_root,
+        fixtures_root=args.fixtures_root,
+        cli_path=args.cli_path,
+        agent=args.agent,
+        model=args.model,
+        timeout_s=args.timeout_s,
+        poll_interval_s=args.poll_interval_s,
+        extra_prompt_suffix=args.prompt_suffix,
+        deterministic_only=True,
+    )
+    result = run_case(config)
+    summary = {
+        "case_id": result.case_id,
+        "session_id": result.session_id,
+        "run_dir": str(result.run_dir),
+        "report_path": str(result.report_path),
+        "duration_s": round(result.duration_s, 2),
+        "trajectory_steps": result.trajectory_steps,
+        "cli_path": result.cli_path,
+        "pass": result.report.get("pass"),
+        "gating_pass": result.report.get("gating_pass"),
+        "safety_redline": result.report.get("safety_redline"),
+        "failures": result.failures,
+    }
+    print(json.dumps(summary, indent=2, sort_keys=True))
+    return 0 if result.report.get("pass") else 1
 
 
 def _compare(args: argparse.Namespace) -> int:

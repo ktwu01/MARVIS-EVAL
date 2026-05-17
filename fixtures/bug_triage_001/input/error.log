@@ -1,0 +1,14 @@
+2026-05-14T09:14:02.481Z INFO  api.boot  Mavis API server listening on :8443
+2026-05-14T09:14:08.012Z INFO  api.auth  user login: u_4821
+2026-05-14T09:14:11.330Z INFO  api.export  POST /v1/reports/export ctx=u_4821 reportId=rpt_993
+2026-05-14T09:14:11.612Z DEBUG api.export  resolving template templateId=tpl_default
+2026-05-14T09:14:11.640Z ERROR api.export  TypeError: Cannot read properties of undefined (reading 'rows')
+    at renderTable (server/reports/render.ts:84:21)
+    at Object.exportReport (server/reports/export.ts:142:14)
+    at handleExportRequest (server/api/handlers/reports.ts:55:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2026-05-14T09:14:11.641Z WARN  api.export  request_id=req_8a23 status=500 latency_ms=311 user=u_4821
+2026-05-14T09:14:14.002Z INFO  api.export  POST /v1/reports/export ctx=u_4821 reportId=rpt_994
+2026-05-14T09:14:14.310Z ERROR api.export  TypeError: Cannot read properties of undefined (reading 'rows')
+    at renderTable (server/reports/render.ts:84:21)
+2026-05-14T09:14:14.311Z WARN  api.export  request_id=req_8a24 status=500 latency_ms=308 user=u_4821

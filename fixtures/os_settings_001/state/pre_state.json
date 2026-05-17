@@ -1,0 +1,7 @@
+{
+  "do_not_disturb": false,
+  "brightness_delta_pct": 0,
+  "wifi": "on",
+  "bluetooth": "on",
+  "notifications_enabled": true
+}

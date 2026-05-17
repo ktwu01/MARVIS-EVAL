@@ -105,11 +105,16 @@ The trajectory is captured by the external evaluation harness from actual tool i
 ## Important Files
 
 - `PRD.md`: product and benchmark design spec.
+- `docs/demo.html`: design narrative + observed results after running 17 cases against a live Mavis daemon.
+- `docs/RUNBOOK.html`: three reproduction paths (manual, agent-driven, full repro).
+- `docs/MAVIS_CLI_SOP.md`: SOP for getting the local Mavis CLI / daemon healthy. **Read this before running `run-mavis`.**
 - `docs/GDPVAL_ALIGNMENT.md`: explicit mapping from GDPVAL's public dataset/paper lessons to this benchmark.
-- `mavis_eval/`: Python harness.
-- `cases/examples/smoke_seed_cases.json`: initial seed case manifest.
-- `schemas/case.schema.json`: JSON Schema artifact for external validators.
 - `docs/ASSERTION_DSL.md`: deterministic assertion reference.
+- `mavis_eval/`: Python harness.
+- `cases/examples/smoke_seed_cases.json`: 17-case seed manifest (13 doc/data + 4 audio/video extensions).
+- `schemas/case.schema.json`: JSON Schema artifact for external validators.
+- `scripts/export_from_mavis_db.py`: rebuild runs/ from ~/.mavis/sqlite.db after Mavis sessions complete.
+- `scripts/build_summary_md.py`: render reports/SUMMARY.md from per-case JSON reports.
 - `prompts/deliverable_judge_v1.0.txt`: canonical semantic judge prompt.
 - `prompts/pairwise_expert_judge_v1.0.txt`: GDPVAL-style anonymized deliverable comparison prompt.
 - `prompts/visual_judge_v1.0.txt`: visual final-state judge prompt.

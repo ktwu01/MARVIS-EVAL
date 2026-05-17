@@ -158,13 +158,13 @@
   <h3>1.2 可选 (想用真实 Mavis 跑 task 才需要)</h3>
   <ul class="checklist">
     <li>本地装好 MiniMax 桌面 app (<span class="path">/Applications/MiniMax.app</span>)。</li>
-    <li>跑 task 前: <strong>先打开桌面 app</strong>。Electron 一启动就会 spawn 内置 daemon, CLI 才能连。<strong>不要</strong>直接跑 <span class="kbd">mavis start</span>; v3.0.27 上它会因 <span class="path">better-sqlite3</span> 打包问题崩, 见 <a href="RUNNING_MAVIS.md">RUNNING_MAVIS.md</a> §5。</li>
+    <li>跑 task 前: <strong>先打开桌面 app</strong>。Electron 一启动就会 spawn 内置 daemon, CLI 才能连。<strong>不要</strong>直接跑 <span class="kbd">mavis start</span>; v3.0.27 上它会因 <span class="path">better-sqlite3</span> 打包问题崩, 见 <a href="MAVIS_CLI_SOP.md">MAVIS_CLI_SOP.md</a> §5。</li>
     <li>验证 daemon 健康: <span class="kbd">~/.mavis/bin/mavis status</span> 应返回 <span class="mono">{"status":"running","port":15321,...}</span>; <span class="kbd">cat ~/.mavis/daemon.pid</span> 应看到 <span class="mono">"owner":"electron"</span> (这是"桌面 app 启的"标记)。</li>
     <li>(进一步) 能跑 judge 模型的 API key (OpenAI / Anthropic / 等等), 用来跑 L3 LLM judge。<strong>注意</strong>: 当前 17 份 report 是在 judge 不可用的情况下产出的, 仅靠 L1 / L2 deterministic 关卡, 故事依然成立, 见 demo 里"实测"。</li>
   </ul>
 
   <div class="callout warn">
-    <strong>关于 Mavis CLI。</strong> 公开 MiniMax 文档目前提到的是 <span class="mono">mmx-cli</span> (在 npm 上 <span class="kbd">npm install -g mmx-cli</span>), 不是我们这里用的 <span class="mono">mavis</span> CLI。<span class="mono">mavis</span> 是桌面 app 在安装时附带的本地 daemon-management CLI, 实际入口在 <span class="path">/Applications/MiniMax.app/Contents/Resources/resources/daemon/cli.js</span>, 经 <span class="path">~/.mavis/bin/mavis</span> 软链。本仓库通过这条非公开但稳定的路径成功驱动了 17 个 case 的 end-to-end 评估。完整调用约定见 <a href="RUNNING_MAVIS.md">RUNNING_MAVIS.md</a>。
+    <strong>关于 Mavis CLI。</strong> 公开 MiniMax 文档目前提到的是 <span class="mono">mmx-cli</span> (在 npm 上 <span class="kbd">npm install -g mmx-cli</span>), 不是我们这里用的 <span class="mono">mavis</span> CLI。<span class="mono">mavis</span> 是桌面 app 在安装时附带的本地 daemon-management CLI, 实际入口在 <span class="path">/Applications/MiniMax.app/Contents/Resources/resources/daemon/cli.js</span>, 经 <span class="path">~/.mavis/bin/mavis</span> 软链。本仓库通过这条非公开但稳定的路径成功驱动了 17 个 case 的 end-to-end 评估。完整调用约定见 <a href="MAVIS_CLI_SOP.md">MAVIS_CLI_SOP.md</a>。
   </div>
 
   <h3>1.3 一次性安装</h3>
@@ -315,7 +315,7 @@ python3 -c "import json; r = json.load(open('reports/excel_anomaly_001.json')); 
   2. 验证 daemon 健康:
        ~/.mavis/bin/mavis status         # 期望: running, port 15321
        cat ~/.mavis/daemon.pid           # 期望: "owner":"electron"
-  3. 如果上面不健康, 停下来读 docs/RUNNING_MAVIS.md, 不要硬冲。
+  3. 如果上面不健康, 停下来读 docs/MAVIS_CLI_SOP.md, 不要硬冲。
 
 对每个 case_id, 跑:
   python3 -m mavis_eval run-mavis cases/examples/smoke_seed_cases.json \
@@ -330,7 +330,7 @@ python3 -c "import json; r = json.load(open('reports/excel_anomaly_001.json')); 
   - 等 mavis 跑完, 把 trajectory 转成 trajectory.jsonl
   - 跑 deterministic 评估, 写 reports/&lt;case_id&gt;.json
 
-如果 mavis daemon 报 better-sqlite3 错, 先停下来读 docs/RUNNING_MAVIS.md, 别硬扛。</pre>
+如果 mavis daemon 报 better-sqlite3 错, 先停下来读 docs/MAVIS_CLI_SOP.md, 别硬扛。</pre>
 
   <h3>3.3 给 agent 的"加判分器 (judge)"prompt (进阶)</h3>
 <pre class="codeblock">前置: 已配置 OPENAI_API_KEY (或你选的 LLM provider 的 key)。
@@ -481,7 +481,7 @@ python3 -m mavis_eval compare \
 
   <div class="card">
     <h4>Q: <span class="kbd">run-mavis</span> 报 <span class="path">Cannot find module 'better-sqlite3'</span></h4>
-    <p>说明 daemon 不是由桌面 app 启动的 (大概率你跑了 <span class="kbd">mavis start</span>)。v3.0.27 的 daemon 必须由桌面 app 的 Electron 子进程启动, 才能加载到 bundled 的 native SQLite 模块。解法: 关掉所有 mavis 进程, <span class="kbd">open /Applications/MiniMax.app</span>, 等 2 秒, 再 <span class="kbd">~/.mavis/bin/mavis status</span> 验证 (期望 <span class="mono">"owner":"electron"</span>)。完整说明见 <a href="RUNNING_MAVIS.md">RUNNING_MAVIS.md</a> §5。</p>
+    <p>说明 daemon 不是由桌面 app 启动的 (大概率你跑了 <span class="kbd">mavis start</span>)。v3.0.27 的 daemon 必须由桌面 app 的 Electron 子进程启动, 才能加载到 bundled 的 native SQLite 模块。解法: 关掉所有 mavis 进程, <span class="kbd">open /Applications/MiniMax.app</span>, 等 2 秒, 再 <span class="kbd">~/.mavis/bin/mavis status</span> 验证 (期望 <span class="mono">"owner":"electron"</span>)。完整说明见 <a href="MAVIS_CLI_SOP.md">MAVIS_CLI_SOP.md</a> §5。</p>
   </div>
 
   <div class="card">
@@ -544,7 +544,7 @@ python3 -m mavis_eval list-cases cases/examples</pre>
 </section>
 
 <footer>
-  <p>Mavis-Eval RUNBOOK v0.1 · 配套 <a href="demo.html">demo.html</a> (设计文档) · <a href="GDPVAL_ALIGNMENT.md">GDPVAL_ALIGNMENT.md</a> (锚点映射) · <a href="ASSERTION_DSL.md">ASSERTION_DSL.md</a> (assertion 语法) · <a href="RUNNING_MAVIS.md">RUNNING_MAVIS.md</a> (真实 Mavis 启动 SOP)</p>
+  <p>Mavis-Eval RUNBOOK v0.1 · 配套 <a href="demo.html">demo.html</a> (设计文档) · <a href="GDPVAL_ALIGNMENT.md">GDPVAL_ALIGNMENT.md</a> (锚点映射) · <a href="ASSERTION_DSL.md">ASSERTION_DSL.md</a> (assertion 语法) · <a href="MAVIS_CLI_SOP.md">MAVIS_CLI_SOP.md</a> (真实 Mavis 启动 SOP)</p>
 </footer>
 
 </div>

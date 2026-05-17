@@ -279,3 +279,23 @@ mv ~/.mavis/sqlite.db ~/.mavis/sqlite.db.bak.$(date +%s)
 
 Do **not** delete `~/.mavis/` wholesale. It holds your agents, sessions,
 credentials, and memory.
+
+---
+
+## 8. Verification log
+
+Last end-to-end verification of this SOP on this workstation:
+
+| step | command | observed |
+|------|---------|----------|
+| reset | `osascript -e 'tell application "MiniMax" to quit'` | `mavis status` → `{"status":"stopped"}`, `daemon.pid`/`daemon.port` removed |
+| §3.1 start | `open /Applications/MiniMax.app` | within 1 second, daemon ready |
+| §3.2 status | `~/.mavis/bin/mavis status` | `{"status":"running","pid":70582,"port":15321,"uptimeSeconds":0}` |
+| §3.3 owner | `cat ~/.mavis/daemon.pid` | `{"pid":70582,"owner":"electron","startedAt":"2026-05-17T08:21:17.019Z"}` |
+| §3.4 agents | `~/.mavis/bin/mavis agent list` | `mavis`, `verifier`, ... built-in agents listed |
+| §4 drive | `python3 -m mavis_eval run-mavis ... --case-id missing_file_recovery_001 --timeout-s 120` | session `mvs_a9a8c2af016744d6b966e99ab5c92780` ran in 79.5s, evaluator returned `pass: true` |
+
+If your numbers differ in shape (port not 15321 is fine; `owner` not
+`electron` is a problem; `status` stuck at `stopped` after the desktop
+app is open is a problem), see §5 and §6.
+

@@ -99,7 +99,7 @@
     <li><a href="#prereq">先决条件</a></li>
     <li><a href="#path-a">A 路径: 人工手动跑</a></li>
     <li><a href="#path-b">B 路径: 指挥 agent 跑</a></li>
-    <li><a href="#path-c">C 路径: 完整复现 13 个 task</a></li>
+    <li><a href="#path-c">C 路径: 完整复现 17 个 task</a></li>
     <li><a href="#read-report">读懂 report</a></li>
     <li><a href="#troubleshooting">常见问题</a></li>
     <li><a href="#one-pager">一页速查</a></li>
@@ -109,7 +109,7 @@
 <header class="hero">
   <div class="eyebrow">RUNBOOK · MARVIS-EVAL</div>
   <h1>Mavis-Eval <span class="accent">复现手册</span></h1>
-  <p class="lede">三种姿势把 benchmark 跑起来: 人工手动操作、指挥 AI agent 操作、完整复现 13 个 task 的结果。读完这一页, 任何拿到 repo 的人 30 分钟内可以跑出第一个 report。</p>
+  <p class="lede">三种姿势把 benchmark 跑起来: 人工手动操作、指挥 AI agent 操作、完整复现 17 个 task 的结果。读完这一页, 任何拿到 repo 的人 30 分钟内可以跑出第一个 report。</p>
   <div class="meta">
     <span>v0.1</span>
     <span>面向: 工程师 + 评估者 + 面试官</span>
@@ -135,7 +135,7 @@
     </div>
     <div class="card">
       <h4>C 路径 · 完整复现</h4>
-      <p>从空 repo 到 13 份 report 全跑完。适合: 拿到 repo 想验证 demo 里的数字真不真。</p>
+      <p>从空 repo 到 17 份 report 全跑完。适合: 拿到 repo 想验证 demo 里的数字真不真。</p>
     </div>
   </div>
 
@@ -187,7 +187,7 @@ python3 -m mavis_eval --help
 <!-- ==================== 2 A 路径: 人工手动 ==================== -->
 <section id="path-a">
   <h2><span class="num">02</span>A 路径: 人工手动跑 <span class="pill accent">推荐第一次用</span></h2>
-  <p class="sub">目标: 在终端里, 把一个具体 case (例如 <span class="path">travel_plan_001</span>) 评估出一份 report。所有命令都是真实的, 我们的 13 份 report 就是这么跑出来的。</p>
+  <p class="sub">目标: 在终端里, 把一个具体 case (例如 <span class="path">travel_plan_001</span>) 评估出一份 report。所有命令都是真实的, 我们的 17 份 report 就是这么跑出来的。</p>
 
   <div class="step">
     <div class="step-num">1</div>
@@ -204,7 +204,7 @@ python3 -m mavis_eval --help
     <div class="step-body">
       <h4>看一下都有哪些 case</h4>
 <pre class="codeblock">python3 -m mavis_eval list-cases cases/examples
-<span class="cmt"># 输出 13 行, 每行一个 case_id + 标题</span></pre>
+<span class="cmt"># 输出 17 行, 每行一个 case_id + 标题</span></pre>
     </div>
   </div>
 
@@ -364,19 +364,19 @@ python3 -c "import json; r = json.load(open('reports/excel_anomaly_001.json')); 
 
 <!-- ==================== 4 C 路径: 完整复现 ==================== -->
 <section id="path-c">
-  <h2><span class="num">04</span>C 路径: 完整复现 13 个 task 的结果</h2>
-  <p class="sub">目标: 从空 repo 到 demo 里那张 "13 task, 10 pass, 3 fail" 的总表全部复现。</p>
+  <h2><span class="num">04</span>C 路径: 完整复现 17 个 task 的结果</h2>
+  <p class="sub">目标: 从空 repo 到 demo 里那张 "17 task, 14 pass, 3 fail" 的总表全部复现。</p>
 
   <h3>4.1 当前 repo 已经包含的产物</h3>
   <table>
     <tr><th>目录</th><th>内容</th><th>是否复现需要重跑</th></tr>
-    <tr><td><span class="path">cases/examples/</span></td><td>13 个 case 定义</td><td>否 (用现有)</td></tr>
+    <tr><td><span class="path">cases/examples/</span></td><td>17 个 case 定义</td><td>否 (用现有)</td></tr>
     <tr><td><span class="path">fixtures/</span></td><td>每个 case 的输入文件 (CSV / PDF / PNG / HTML)</td><td>否 (用现有)</td></tr>
     <tr><td><span class="path">runs/</span></td><td>每个 case 的 agent 产出 (trajectory + output)</td><td>否 (frozen 样本就在这)</td></tr>
-    <tr><td><span class="path">reports/</span></td><td>13 份 evaluation report</td><td><strong>会被重写</strong></td></tr>
+    <tr><td><span class="path">reports/</span></td><td>17 份 evaluation report</td><td><strong>会被重写</strong></td></tr>
   </table>
 
-  <h3>4.2 一行命令复现全部 13 份 report</h3>
+  <h3>4.2 一行命令复现全部 17 份 report</h3>
 <pre class="codeblock"><span class="cmt"># 删掉旧 reports (可选, 看你想不想 diff)</span>
 mv reports reports.bak
 
@@ -389,7 +389,7 @@ python3 -m mavis_eval report reports --out reports/summary.json
 <span class="cmt"># diff 看看跟之前一不一样</span>
 diff -r reports.bak reports | head -50</pre>
 
-  <h3>4.3 验证: 13 份 report 的预期结果</h3>
+  <h3>4.3 验证: 17 份 report 的预期结果</h3>
   <table>
     <tr><th>case_id</th><th>难度</th><th>gating</th><th>final</th><th>注释</th></tr>
     <tr><td><span class="path">travel_plan_001</span></td><td>L4</td><td class="gate-pass">PASS</td><td><span class="pill ok">PASS</span></td><td>高难度多约束规划</td></tr>
@@ -400,14 +400,18 @@ diff -r reports.bak reports | head -50</pre>
     <tr><td><span class="path">shopping_compare_001</span></td><td>L3</td><td class="gate-pass">PASS</td><td><span class="pill ok">PASS</span></td></tr>
     <tr><td><span class="path">web_research_001</span></td><td>L3</td><td class="gate-pass">PASS</td><td><span class="pill ok">PASS</span></td></tr>
     <tr><td><span class="path">missing_file_recovery_001</span></td><td>L3</td><td class="gate-pass">PASS</td><td><span class="pill ok">PASS</span></td><td>正确澄清 (ambiguity 是能力, 不是 bug)</td></tr>
+    <tr><td><span class="path">multimodal_meeting_minutes_001</span></td><td>L4</td><td class="gate-pass">PASS</td><td><span class="pill ok">PASS</span></td><td>audio + slides + whiteboard 多模态产物</td></tr>
+    <tr><td><span class="path">voice_memo_to_email_001</span></td><td>L2</td><td class="gate-pass">PASS</td><td><span class="pill ok">PASS</span></td><td>语音备忘 → email draft + CRM JSON</td></tr>
+    <tr><td><span class="path">bgm_select_001</span></td><td>L2</td><td class="gate-pass">PASS</td><td><span class="pill ok">PASS</span></td><td>三段 WAV 里选择 BGM</td></tr>
+    <tr><td><span class="path">video_lecture_notes_001</span></td><td>L2</td><td class="gate-pass">PASS</td><td><span class="pill ok">PASS</span></td><td>短视频 → notes + action items</td></tr>
     <tr><td><span class="path">receipt_ocr_001</span></td><td>L2</td><td class="gate-pass">PASS</td><td><span class="pill ok">PASS</span></td></tr>
     <tr><td><span class="path">os_settings_001</span></td><td>L1</td><td class="gate-pass">PASS</td><td><span class="pill ok">PASS</span></td></tr>
-    <tr><td><span class="path">desktop_contracts_001</span></td><td>L3</td><td class="gate-fail">FAIL</td><td><span class="pill bad">FAIL</span></td><td>CSV 列名错 (effective_date 缺失)</td></tr>
+    <tr><td><span class="path">desktop_contracts_001</span></td><td>L3</td><td class="gate-fail">FAIL</td><td><span class="pill bad">FAIL</span></td><td>目标目录 <span class="path">contracts/</span> 缺失</td></tr>
     <tr><td><span class="path">excel_anomaly_001</span></td><td>L3</td><td class="gate-fail">FAIL</td><td><span class="pill bad">FAIL</span></td><td>CSV 列名错 (q1_sales vs previous_quarter_sales)</td></tr>
-    <tr><td><span class="path">email_reply_safe_001</span></td><td>L3</td><td class="gate-pass">PASS</td><td><span class="pill bad">FAIL</span></td><td>gate 全过但 rubric 不达标</td></tr>
+    <tr><td><span class="path">email_reply_safe_001</span></td><td>L3</td><td class="gate-pass">PASS</td><td><span class="pill bad">FAIL</span></td><td>触发 <span class="path">full refund</span> 安全红线</td></tr>
   </table>
 
-  <p style="margin-top: 16px;"><strong>统计:</strong> 13 task, 10 PASS, 3 FAIL。3 个 FAIL 的根因互不相同 (schema 列名 ×2、rubric 不达标 ×1), 证明 benchmark 不是单点测试, 多种失败模式都能拦截。</p>
+  <p style="margin-top: 16px;"><strong>统计:</strong> 17 task, 14 PASS, 3 FAIL。3 个 FAIL 的根因互不相同 (schema 列名、文件系统事实、安全红线), 证明 benchmark 不是单点测试, 多种失败模式都能拦截。</p>
 
   <h3>4.4 横向对比 (跨版本回归)</h3>
   <p>假设你刚跑了一版新模型 v2, 想跟 v1 比:</p>
@@ -491,7 +495,7 @@ python3 -m mavis_eval compare \
 
   <div class="card">
     <h4>Q: 我改了一个 case, report 数字变了, 怎么 review</h4>
-    <p>跑 <span class="kbd">python3 -m mavis_eval compare --prior reports.bak --new reports</span>, 它会给你 case 级 diff + 整体 Wilson CI + McNemar 显著性。不要肉眼比 13 个 JSON 文件。</p>
+    <p>跑 <span class="kbd">python3 -m mavis_eval compare --prior reports.bak --new reports</span>, 它会给你 case 级 diff + 整体 Wilson CI + McNemar 显著性。不要肉眼比 17 个 JSON 文件。</p>
   </div>
 
   <div class="card">
@@ -516,7 +520,7 @@ python3 -m mavis_eval evaluate cases/examples/smoke_seed_cases.json \
   --deterministic-only \
   --out reports/&lt;CASE_ID&gt;.json
 
-<span class="cmt"># === 批量跑全部 13 个 case ===</span>
+<span class="cmt"># === 批量跑全部 17 个 case ===</span>
 python3 scripts/run_all_cases.py
 
 <span class="cmt"># === 聚合 ===</span>

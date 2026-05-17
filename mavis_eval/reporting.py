@@ -32,6 +32,9 @@ def summarize_reports(reports: list[dict[str, Any]]) -> dict[str, Any]:
         "by_partition": _grouped(reports, "partition"),
         "by_scenario": _grouped(reports, "scenario"),
         "by_difficulty": _grouped(reports, "difficulty"),
+        "by_economic_sector": _grouped_nested(reports, ("professional_context", "economic_sector")),
+        "by_occupation": _grouped_nested(reports, ("professional_context", "occupation")),
+        "pairwise": _summarize_pairwise(reports),
         "failure_modes": dict(Counter(mode for report in reports for mode in report.get("failure_modes", []))),
         "safety_redline_count": sum(1 for report in reports if report.get("safety_redline")),
         "requires_human_audit_count": sum(1 for report in reports if report.get("requires_human_audit")),
@@ -74,6 +77,35 @@ def _grouped(reports: list[dict[str, Any]], field: str) -> dict[str, Any]:
     for report in reports:
         groups[str(report.get(field, "<missing>"))].append(report)
     return {key: _summarize_slice(value) for key, value in sorted(groups.items())}
+
+
+def _grouped_nested(reports: list[dict[str, Any]], path: tuple[str, str]) -> dict[str, Any]:
+    groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    outer, inner = path
+    for report in reports:
+        value = report.get(outer, {})
+        key = value.get(inner, "<missing>") if isinstance(value, dict) else "<missing>"
+        groups[str(key)].append(report)
+    return {key: _summarize_slice(value) for key, value in sorted(groups.items())}
+
+
+def _summarize_pairwise(reports: list[dict[str, Any]]) -> dict[str, Any]:
+    winners: list[str] = []
+    for report in reports:
+        winner = report.get("pairwise_winner")
+        if winner is None and isinstance(report.get("pairwise"), dict):
+            winner = report["pairwise"].get("winner")
+        if isinstance(winner, str):
+            winners.append(winner)
+    counts = Counter(winners)
+    n = sum(counts.values())
+    return {
+        "n": n,
+        "winner_counts": dict(counts),
+        "a_win_rate": round(counts.get("A", 0) / n, 4) if n else None,
+        "b_win_rate": round(counts.get("B", 0) / n, 4) if n else None,
+        "tie_rate": round((counts.get("tie", 0) + counts.get("tie_fail", 0)) / n, 4) if n else None,
+    }
 
 
 def _summarize_slice(reports: list[dict[str, Any]]) -> dict[str, Any]:

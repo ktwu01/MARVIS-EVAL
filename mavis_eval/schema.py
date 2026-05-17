@@ -71,6 +71,14 @@ REQUIRED_CASE_FIELDS = {
 }
 
 ASSERTION_REQUIRED_FIELDS = {"id", "type"}
+GDPVAL_REQUIRED_PARTITIONS = {"gold", "full", "hidden"}
+GDPVAL_REQUIRED_FIELDS = {
+    "professional_context",
+    "reference_assets",
+    "target_deliverables",
+    "rubric_items",
+    "human_quality",
+}
 
 
 @dataclass(frozen=True)
@@ -154,6 +162,19 @@ def validate_case(case: dict[str, Any], source: str = "<case>") -> list[Validati
 
     if "forbidden_tools" in case:
         _expect_list_of_strings(case, "forbidden_tools", issues, source, min_len=0)
+    if "professional_context" in case and not isinstance(case["professional_context"], dict):
+        issues.append(ValidationIssue(f"{source}.professional_context", "must be an object when present"))
+    for field in ("reference_assets", "target_deliverables"):
+        if field in case:
+            issues.extend(_validate_artifact_list(case[field], f"{source}.{field}"))
+    if "rubric_items" in case:
+        issues.extend(_validate_rubric_items(case["rubric_items"], f"{source}.rubric_items"))
+    if "human_quality" in case and not isinstance(case["human_quality"], dict):
+        issues.append(ValidationIssue(f"{source}.human_quality", "must be an object when present"))
+    if "pre_submission_checks" in case and not isinstance(case["pre_submission_checks"], list):
+        issues.append(ValidationIssue(f"{source}.pre_submission_checks", "must be an array when present"))
+    if "comparison_policy" in case and not isinstance(case["comparison_policy"], dict):
+        issues.append(ValidationIssue(f"{source}.comparison_policy", "must be an object when present"))
 
     environment = case.get("environment")
     if not isinstance(environment, dict):
@@ -168,6 +189,7 @@ def validate_case(case: dict[str, Any], source: str = "<case>") -> list[Validati
     issues.extend(_validate_evaluation(case["evaluation"], f"{source}.evaluation"))
     issues.extend(_validate_rubric(case["rubric"], f"{source}.rubric"))
     issues.extend(_validate_metadata(case["metadata"], f"{source}.metadata"))
+    issues.extend(_validate_partition_requirements(case, source))
 
     return issues
 
@@ -223,6 +245,42 @@ def _validate_assertion(value: Any, source: str) -> list[ValidationIssue]:
     return issues
 
 
+def _validate_artifact_list(value: Any, source: str) -> list[ValidationIssue]:
+    if not isinstance(value, list):
+        return [ValidationIssue(source, "must be an array when present")]
+    issues: list[ValidationIssue] = []
+    for index, artifact in enumerate(value):
+        path = f"{source}[{index}]"
+        if not isinstance(artifact, dict):
+            issues.append(ValidationIssue(path, "must be an object"))
+            continue
+        for field in ("id", "type"):
+            if not isinstance(artifact.get(field), str) or not artifact.get(field):
+                issues.append(ValidationIssue(f"{path}.{field}", "must be a non-empty string"))
+        if "path" not in artifact and "uri" not in artifact:
+            issues.append(ValidationIssue(path, "must include path or uri"))
+    return issues
+
+
+def _validate_rubric_items(value: Any, source: str) -> list[ValidationIssue]:
+    if not isinstance(value, list):
+        return [ValidationIssue(source, "must be an array when present")]
+    issues: list[ValidationIssue] = []
+    for index, item in enumerate(value):
+        path = f"{source}[{index}]"
+        if not isinstance(item, dict):
+            issues.append(ValidationIssue(path, "must be an object"))
+            continue
+        if not isinstance(item.get("id"), str) or not item.get("id"):
+            issues.append(ValidationIssue(f"{path}.id", "must be a non-empty string"))
+        if not isinstance(item.get("criterion"), str) or not item.get("criterion"):
+            issues.append(ValidationIssue(f"{path}.criterion", "must be a non-empty string"))
+        points = item.get("points")
+        if not isinstance(points, int | float) or float(points) <= 0:
+            issues.append(ValidationIssue(f"{path}.points", "must be a positive number"))
+    return issues
+
+
 def _validate_evaluation(value: Any, source: str) -> list[ValidationIssue]:
     if not isinstance(value, dict):
         return [ValidationIssue(source, "must be an object")]
@@ -230,6 +288,16 @@ def _validate_evaluation(value: Any, source: str) -> list[ValidationIssue]:
     if eval_type not in EVAL_TYPES:
         return [ValidationIssue(f"{source}.primary_eval_type", f"unknown eval type '{eval_type}'")]
     return []
+
+
+def _validate_partition_requirements(case: dict[str, Any], source: str) -> list[ValidationIssue]:
+    partition = case.get("metadata", {}).get("partition")
+    if partition not in GDPVAL_REQUIRED_PARTITIONS:
+        return []
+    issues: list[ValidationIssue] = []
+    for field in sorted(GDPVAL_REQUIRED_FIELDS - set(case)):
+        issues.append(ValidationIssue(source, f"missing GDPVAL-derived field '{field}' for {partition} partition"))
+    return issues
 
 
 def _validate_rubric(value: Any, source: str) -> list[ValidationIssue]:

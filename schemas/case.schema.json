@@ -31,6 +31,25 @@
     "scenario": { "type": "string" },
     "input_modalities": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
     "output_modalities": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "professional_context": {
+      "type": "object",
+      "properties": {
+        "economic_sector": { "type": "string" },
+        "occupation": { "type": "string" },
+        "work_activity": { "type": "string" },
+        "deliverable_value_basis": { "type": "string" },
+        "estimated_expert_minutes": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "reference_assets": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/artifact" }
+    },
+    "target_deliverables": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/artifact" }
+    },
     "difficulty": { "enum": ["L1", "L2", "L3", "L4", "L5"] },
     "environment": {
       "type": "object",
@@ -98,6 +117,58 @@
         "additionalProperties": true
       }
     },
+    "rubric_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "points", "criterion"],
+        "properties": {
+          "id": { "type": "string" },
+          "points": { "type": "number", "exclusiveMinimum": 0 },
+          "criterion": { "type": "string", "minLength": 1 },
+          "dimension": { "type": "string" },
+          "critical": { "type": "boolean" },
+          "evidence_source": { "type": "string" },
+          "check_type": { "enum": ["script_checkable", "judge_only", "human_audit_only", "hybrid"] }
+        },
+        "additionalProperties": true
+      }
+    },
+    "human_quality": {
+      "type": "object",
+      "properties": {
+        "expert_reviewers": { "type": "array", "items": { "type": "string" } },
+        "manual_completion_verified": { "type": "boolean" },
+        "baseline_pass_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "representativeness_score_1_to_5": { "type": "number", "minimum": 1, "maximum": 5 },
+        "ambiguity_notes": { "type": "string" },
+        "qa_signoff": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "pre_submission_checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "description"],
+        "properties": {
+          "id": { "type": "string" },
+          "description": { "type": "string" },
+          "required": { "type": "boolean" },
+          "applies_to": { "type": "array", "items": { "type": "string" } }
+        },
+        "additionalProperties": true
+      }
+    },
+    "comparison_policy": {
+      "type": "object",
+      "properties": {
+        "pairwise_required": { "type": "boolean" },
+        "comparison_targets": { "type": "array", "items": { "enum": ["prior_mavis", "competitor", "human_expert_reference"] } },
+        "pairwise_judge_prompt_id": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
     "metadata": {
       "type": "object",
       "required": ["source", "author", "created", "partition", "judge_prompt_id"],
@@ -112,7 +183,42 @@
       "additionalProperties": true
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "required": ["metadata"],
+        "properties": {
+          "metadata": {
+            "required": ["partition"],
+            "properties": {
+              "partition": { "enum": ["gold", "full", "hidden"] }
+            }
+          }
+        }
+      },
+      "then": {
+        "required": ["professional_context", "reference_assets", "target_deliverables", "rubric_items", "human_quality"]
+      }
+    }
+  ],
   "$defs": {
+    "artifact": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "path": { "type": "string" },
+        "uri": { "type": "string" },
+        "mime_type": { "type": "string" },
+        "role": { "type": "string" },
+        "sha256": { "type": "string" },
+        "required": { "type": "boolean" },
+        "description": { "type": "string" },
+        "render_check_required": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
     "assertion": {
       "type": "object",
       "required": ["id", "type"],

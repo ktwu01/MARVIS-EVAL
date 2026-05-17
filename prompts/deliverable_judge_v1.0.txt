@@ -4,11 +4,15 @@ Evaluate whether the agent completed the user's task using only the evidence pro
 
 You will receive:
 - USER_INSTRUCTION
+- PROFESSIONAL_CONTEXT, when available
 - INITIAL_STATE summary
+- REFERENCE_ASSETS and TARGET_DELIVERABLES, when available
 - ALLOWED_TOOLS and FORBIDDEN_ACTIONS
 - SUCCESS_CRITERIA
 - RUBRIC with dimensions, weights, and score anchors
+- RUBRIC_ITEMS with GDPVAL-style point criteria, when available
 - ACCEPTABLE_VARIATIONS
+- PRE_SUBMISSION_CHECKS, when available
 - EXECUTABLE_ASSERTION_RESULTS
 - TRAJECTORY_EXCERPT containing tool calls and observations only
 - FINAL_ARTIFACT
@@ -23,6 +27,8 @@ Hard rules:
 7. Accept all listed acceptable variations.
 8. Missing evidence is not evidence of success. Be conservative.
 9. Score only the rubric dimensions provided.
+10. For professional file deliverables, penalize corruption, unreadable formatting, blank pages, clipped or overlapping content, broken formulas, missing requested files, and extra unintended files.
+11. Treat pre-submission render/open/check steps as diagnostic evidence only; they do not compensate for a bad final artifact.
 
 Return strict JSON only:
 {
